@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppWithTranslations } from '@/stores/useAppStore';
@@ -38,7 +39,10 @@ const CategoryButton = ({ category }: { category: Category }) => {
     return LucideIcons[formattedIconName] || LucideIcons.HelpCircle;
   };
 
-  const IconComponent = getIconComponent(category.icon_url);
+  const IconComponent = getIconComponent(category.icon);
+
+  // Получаем имя категории в зависимости от языка
+  const categoryName = language === 'ru' ? category.name_ru : category.name_kz;
 
   // Если slug категории в списке исключен, то будет просто ссылка 
   if (excludedSlugs.includes(category.slug)) {
@@ -46,7 +50,7 @@ const CategoryButton = ({ category }: { category: Category }) => {
       <Link to={`/listings/${category.slug}`} className="text-center">
         <Button variant="ghost" className="h-auto p-2 flex flex-col items-center justify-center">
           <IconComponent className="w-8 h-8 mb-2" />
-          <span className="text-xs">{category.name}</span>
+          <span className="text-xs">{categoryName}</span>
         </Button>
       </Link>
     );
@@ -58,7 +62,7 @@ const CategoryButton = ({ category }: { category: Category }) => {
       <PopoverTrigger asChild>
         <Button variant="ghost" className="h-auto p-2 flex flex-col items-center justify-center">
           <IconComponent className="w-8 h-8 mb-2" />
-          <span className="text-xs">{category.name}</span>
+          <span className="text-xs">{categoryName}</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-56 p-2">
@@ -66,16 +70,19 @@ const CategoryButton = ({ category }: { category: Category }) => {
           <div>Загрузка...</div>
         ) : (
           <div className="grid gap-2">
-            {subcategories.map((subcategory) => (
-              <Link
-                key={subcategory.id}
-                to={`/listings/${subcategory.slug}`}
-                className="block px-3 py-2 text-sm hover:bg-gray-100 rounded-md"
-                onClick={() => setPopoverOpen(false)}
-              >
-                {subcategory.name}
-              </Link>
-            ))}
+            {subcategories.map((subcategory) => {
+              const subcategoryName = language === 'ru' ? subcategory.name_ru : subcategory.name_kz;
+              return (
+                <Link
+                  key={subcategory.id}
+                  to={`/listings/${subcategory.slug}`}
+                  className="block px-3 py-2 text-sm hover:bg-gray-100 rounded-md"
+                  onClick={() => setPopoverOpen(false)}
+                >
+                  {subcategoryName}
+                </Link>
+              );
+            })}
           </div>
         )}
       </PopoverContent>
@@ -83,7 +90,7 @@ const CategoryButton = ({ category }: { category: Category }) => {
   );
 };
 
-export default function CategoryMenu() {
+export const CategoryMenu = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [mainCategories, setMainCategories] = useState<Category[]>([]);
@@ -163,4 +170,6 @@ export default function CategoryMenu() {
       </div>
     </div>
   );
-}
+};
+
+export default CategoryMenu;

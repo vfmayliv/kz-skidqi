@@ -1,7 +1,7 @@
 
 import { CitySelectionModal } from '@/components/CitySelectionModal';
 import { Header } from '@/components/Header';
-import { CategoryMenu } from '@/components/CategoryMenu';
+import CategoryMenu from '@/components/CategoryMenu';
 import { EnhancedFeaturedListings } from '@/components/EnhancedFeaturedListings';
 import { Footer } from '@/components/Footer';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
