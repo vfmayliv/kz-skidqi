@@ -1,33 +1,27 @@
-import { useToast } from "@/hooks/use-toast"
-import {
-  Toast,
-  ToastClose,
-  ToastDescription,
-  ToastProvider,
-  ToastTitle,
-  ToastViewport,
-} from "@/components/ui/toast"
+
+import { Toaster as SonnerToaster } from "sonner";
+import { useTheme } from "next-themes";
 
 export function Toaster() {
-  const { toasts } = useToast()
-
+  const { theme } = useTheme();
+  
   return (
-    <ToastProvider>
-      {toasts.map(function ({ id, title, description, action, ...props }) {
-        return (
-          <Toast key={id} {...props}>
-            <div className="grid gap-1">
-              {title && <ToastTitle>{title}</ToastTitle>}
-              {description && (
-                <ToastDescription>{description}</ToastDescription>
-              )}
-            </div>
-            {action}
-            <ToastClose />
-          </Toast>
-        )
-      })}
-      <ToastViewport />
-    </ToastProvider>
-  )
+    <SonnerToaster
+      theme={theme as "light" | "dark" | "system"}
+      className="toaster-container"
+      toastOptions={{
+        classNames: {
+          toast: "group toast",
+          title: "toast-title",
+          description: "toast-description",
+          actionButton: "toast-action",
+          closeButton: "toast-close",
+          success: "bg-green-500",
+          error: "bg-red-500",
+          warning: "bg-yellow-500",
+          info: "bg-blue-500",
+        }
+      }}
+    />
+  );
 }

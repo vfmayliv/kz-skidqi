@@ -1,0 +1,166 @@
+const startImport = async () => {
+  setIsImporting(true);
+  setImportProgress(0);
+  setImportedCount(0);
+  setErrorCount(0);
+  
+  try {
+    // 1. Получаем текущего авторизованного пользователя
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError || !userData?.user) {
+      toast({
+        variant: "destructive",
+        title: "Ошибка авторизации",
+        description: "Необходимо авторизоваться для импорта объявлений"
+      });
+      setIsImporting(false);
+      return;
+    }
+    const userId = userData.user.id;
+    
+    // 2. Подготавливаем дату истечения
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + importSettings.expiryDays);
+    
+    // 3. Импорт объявлений
+    if (!csvData || !fieldMappings.length) {
+      setIsImporting(false);
+      toast({
+        variant: "destructive",
+        title: "Ошибка импорта",
+        description: "Нет данных для импорта или не настроено сопоставление полей"
+      });
+      return;
+    }
+    
+    const totalRows = csvData.rows.length;
+    let importedListings = 0;
+    
+    for (let i = 0; i < totalRows; i++) {
+      const row = csvData.rows[i];
+      
+      // Создаем объект с данными объявления
+      const rowData: Record<string, any> = {};
+      
+      // Заполняем данные из CSV
+      fieldMappings.forEach(mapping => {
+        if (mapping.csvField && mapping.systemField) {
+          const headerIndex = csvData.headers.indexOf(mapping.csvField);
+          if (headerIndex > -1) {
+            // Обработка полей в зависимости от типа
+            if (mapping.systemField === 'regular_price' || mapping.systemField === 'discount_price') {
+              // Конвертация строк с ценами в числа (удаление пробелов, символов валют и т.д.)
+              const priceStr = row[headerIndex] || '';
+              const numericPrice = parseInt(priceStr.replace(/\D/g, ''), 10);
+              rowData[mapping.systemField] = isNaN(numericPrice) ? null : numericPrice;
+            } else {
+              rowData[mapping.systemField] = row[headerIndex] || '';
+            }
+          }
+        }
+      });
+      
+      // Добавляем обязательные поля и общие настройки
+      const listingData = {
+        ...rowData,
+        category_id: importSettings.categoryId,
+        city_id: importSettings.cityId,
+        expires_at: expiryDate.toISOString(),
+        status: 'active',
+        views: 0,
+        is_premium: false,
+        is_free: false,
+        user_id: userId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      // Обработка изображений (если есть)
+      if (rowData.image) {
+        listingData.images = [rowData.image];
+      }
+      
+      // Удаление null и undefined значений
+      Object.keys(listingData).forEach(key => {
+        if (listingData[key] === null || listingData[key] === undefined) {
+          delete listingData[key];
+        }
+      });
+      
+      // Проверка обязательных полей
+      if (!listingData.title || !listingData.description) {
+        toast({
+          variant: "destructive",
+          title: `Ошибка в строке ${i + 1}`,
+          description: "Отсутствуют обязательные поля: заголовок или описание"
+        });
+        setErrorCount(prev => prev + 1);
+        continue;
+      }
+      
+      try {
+        // Вставка объявления в базу данных
+        const { data: insertedData, error } = await supabase
+          .from('listings')
+          .insert(listingData)
+          .select();
+        
+        if (error) {
+          console.error("Error importing listing:", error);
+          toast({
+            variant: "destructive",
+            title: `Ошибка в строке ${i + 1}`,
+            description: `${error.message || 'Неизвестная ошибка'}`
+          });
+          setErrorCount(prev => prev + 1);
+        } else {
+          importedListings++;
+          setImportedCount(prev => prev + 1);
+        }
+      } catch (err) {
+        console.error("Exception during import:", err);
+        toast({
+          variant: "destructive",
+          title: `Ошибка в строке ${i + 1}`,
+          description: `${err.message || 'Неизвестная ошибка'}`
+        });
+        setErrorCount(prev => prev + 1);
+      }
+      
+      // Обновление прогресса
+      const progress = Math.round(((i + 1) / totalRows) * 100);
+      setImportProgress(progress);
+    }
+    
+    // 4. Проверка результатов импорта
+    const { data: countData } = await supabase
+      .from('listings')
+      .select('id', { count: 'exact' })
+      .eq('user_id', userId)
+      .gte('created_at', new Date(Date.now() - 1000 * 60 * 5).toISOString()); // последние 5 минут
+      
+    // 5. Финальное уведомление
+    if (importedListings > 0) {
+      toast({
+        title: "Импорт завершен",
+        description: `Успешно импортировано ${importedListings} объявлений`
+      });
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Импорт завершен с ошибками",
+        description: "Не удалось импортировать ни одно объявление"
+      });
+    }
+    
+  } catch (error) {
+    console.error("Import error:", error);
+    toast({
+      variant: "destructive",
+      title: "Ошибка импорта",
+      description: error.message || "Неизвестная ошибка при импорте"
+    });
+  } finally {
+    setIsImporting(false);
+  }
+};

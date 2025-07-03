@@ -1,22 +1,27 @@
-# Welcome to your Lovable project
+# Skidqi.kz - Доска объявлений со скидками
 
 ## Project info
 
-**URL**: https://lovable.dev/projects/21ee4065-2c0f-4611-b186-584b46db524b
+Skidqi.kz - современная доска объявлений для Казахстана с акцентом на товары и услуги со скидками.
 
 ## How can I edit this code?
 
 There are several ways of editing your application.
 
-**Use Lovable**
+## О проекте
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/21ee4065-2c0f-4611-b186-584b46db524b) and start prompting.
+Skidqi.kz - это платформа, где пользователи могут размещать и находить объявления о товарах и услугах со скидками в различных категориях.
 
-Changes made via Lovable will be committed automatically to this repo.
+## Основные функции
 
 **Use your preferred IDE**
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+- Регистрация и авторизация пользователей
+- Размещение объявлений с фотографиями
+- Поиск и фильтрация объявлений
+- Категории и подкатегории товаров/услуг
+- Избранные объявления
+- Многоязычность (русский и казахский)
 
 The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
@@ -62,12 +67,27 @@ This project is built with:
 
 ## How can I deploy this project?
 
-Simply open [Lovable](https://lovable.dev/projects/21ee4065-2c0f-4611-b186-584b46db524b) and click on Share -> Publish.
+## Технологии
 
-## Can I connect a custom domain to my Lovable project?
+- React + TypeScript
+- Vite
+- Tailwind CSS
+- Shadcn/ui
+- Supabase для базы данных и авторизации
 
-Yes, you can!
+Yes it is!
 
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+## Запуск проекта
+
+```bash
+# Установка зависимостей
+npm install
+
+# Запуск dev-сервера
+npm run dev
+
+# Сборка для продакшн
+npm run build
+```
