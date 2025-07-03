@@ -1,7 +1,7 @@
-
 import { CitySelectionModal } from '@/components/CitySelectionModal';
 import { Header } from '@/components/Header';
 import CategoryMenu from '@/components/CategoryMenu';
+import CategoryGrid from '@/components/CategoryGrid';
 import { EnhancedFeaturedListings } from '@/components/EnhancedFeaturedListings';
 import { Footer } from '@/components/Footer';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
@@ -28,12 +28,11 @@ const Banner = () => {
               >
                 <div className="absolute inset-0 bg-black bg-opacity-40"></div>
                 <div className="relative z-10">
-                  <h2 className="text-2xl md:text-4xl font-bold mb-2">{t('siteName')}</h2>
-                  <p className="text-lg md:text-xl mb-4 text-center">{t('tagline')}</p>
-                  <p className="text-sm md:text-base text-center max-w-lg">
-                    {language === 'ru' 
-                      ? 'Находите товары со скидками у продавцов в вашем городе'
-                      : 'Өз қалаңыздағы сатушылардан жеңілдіктері бар тауарларды табыңыз'}
+                  <h2 className="text-2xl md:text-4xl font-bold mb-2">
+                    {language === 'ru' ? 'Добро пожаловать на Skidoska.kz' : 'Skidoska.kz-ге қош келдіңіз'}
+                  </h2>
+                  <p className="text-lg md:text-xl mb-4 text-center">
+                    {language === 'ru' ? 'Покупайте и продавайте все, что угодно' : 'Кез келген затты сатып алыңыз және сатыңыз'}
                   </p>
                 </div>
               </div>
@@ -42,9 +41,9 @@ const Banner = () => {
               <div 
                 className="h-[200px] md:h-[300px] rounded-lg flex flex-col items-center justify-center text-white p-6 relative overflow-hidden"
                 style={{
-                  backgroundImage: "url('/bg.png')",
+                  backgroundImage: "url('/sale.jpg')",
                   backgroundSize: "cover",
-                  backgroundPosition: isMobile ? "center" : "center"
+                  backgroundPosition: "center"
                 }}
               >
                 <div className="absolute inset-0 bg-black bg-opacity-30 bg-gradient-to-r from-red-500/70 to-orange-500/70"></div>
@@ -73,7 +72,8 @@ const Index = () => {
       <CitySelectionModal />
       <Header />
       <Banner />
-      <CategoryMenu />
+      {/* Новый компонент с сеткой категорий и выпадающими подкатегориями */}
+      <CategoryGrid />
       <main className="flex-1">
         <EnhancedFeaturedListings />
       </main>
