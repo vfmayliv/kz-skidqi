@@ -1,48 +1,32 @@
-import { useState, useEffect } from 'react';
+
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppWithTranslations } from '@/stores/useAppStore';
 import * as LucideIcons from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/lib/supabase';
-import type { Category } from '@/types/category';
-
-// ID основных категорий верхнего уровня
-const MAIN_CATEGORY_IDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
+import { categories } from '@/data/categories';
 
 // Компонент для одной кнопки категории
-const CategoryButton = ({ category }: { category: Category }) => {
+const CategoryButton = ({ category }: { category: any }) => {
   const { language } = useAppWithTranslations();
   
-  let IconComponent = LucideIcons.LayoutGrid; // Иконка по умолчанию
-  try {
-    // @ts-ignore
-    if (category.icon && LucideIcons[category.icon]) {
-      // @ts-ignore
-      IconComponent = LucideIcons[category.icon];
-    } else if (category.icon) {
-      const formattedIconName = category.icon
-        .split('-')
-        .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-        .join('');
-      
-      // @ts-ignore
-      if (LucideIcons[formattedIconName]) {
-        // @ts-ignore
-        IconComponent = LucideIcons[formattedIconName];
-      }
-    }
-  } catch (error) {
-    console.error('Ошибка при получении иконки:', error);
-  }
+  const DynamicIcon = ({ name, className }: { name: string, className?: string }) => {
+    const IconComponent = (LucideIcons as any)[name];
+    return IconComponent ? <IconComponent className={className} /> : null;
+  };
 
   return (
-    <Link to={`/category/${category.slug}`} className="w-full">
-      <Button 
-        variant="outline" 
-        className="h-24 w-full p-2 flex flex-col items-center justify-center border border-gray-200"
-      >
-        <IconComponent className="h-6 w-6 mb-2" />
-        <span className="text-xs text-center">{category.name}</span>
+    <Link
+      to={category.id === 'property' ? '/property' : 
+           category.id === 'transport' ? '/transport' : 
+           `/category/${category.id}`}
+      className="text-center"
+    >
+      <Button variant="ghost" className="h-auto p-4 flex flex-col items-center justify-center hover:bg-gray-50 transition-colors w-full">
+        <DynamicIcon name={category.icon} className="h-8 w-8 mb-2 text-gray-600" />
+        <span className="text-sm font-medium text-gray-900">
+          {category.name[language]}
+        </span>
       </Button>
     </Link>
   );
@@ -50,65 +34,11 @@ const CategoryButton = ({ category }: { category: Category }) => {
 
 // Основной компонент сетки категорий
 const CategoryGrid = () => {
-  const [loading, setLoading] = useState(true);
-  const [mainCategories, setMainCategories] = useState<Category[]>([]);
-  const { language } = useAppWithTranslations();
-
-  useEffect(() => {
-    const fetchCategories = async () => {
-      setLoading(true);
-      try {
-        const { data: allData, error } = await supabase
-          .from('categories')
-          .select('*')
-          .order('sort_order', { ascending: true });
-        
-        if (error) throw error;
-        
-        if (allData) {
-          const mainCats = allData
-            .filter(cat => MAIN_CATEGORY_IDS.includes(cat.id))
-            .sort((a, b) => a.sort_order - b.sort_order);
-          
-          if (mainCats.length > 0) {
-            setMainCategories(mainCats);
-          } else {
-            setMainCategories(allData.slice(0, 13));
-          }
-        }
-
-      } catch (err) {
-        console.error('Ошибка при загрузке категорий:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCategories();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="bg-white py-6">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {Array.from({ length: 12 }).map((_, index) => (
-              <div key={index} className="h-24 w-full p-2 flex flex-col items-center justify-center border border-gray-200 rounded-md animate-pulse">
-                <div className="h-8 w-8 mb-2 bg-gray-200 rounded-full"></div>
-                <div className="h-4 w-20 bg-gray-200 rounded"></div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="bg-white py-6">
+    <div className="bg-white py-8">
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          {mainCategories.map(category => (
+          {categories.map(category => (
             <CategoryButton key={category.id} category={category} />
           ))}
         </div>
