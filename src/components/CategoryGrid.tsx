@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppWithTranslations } from '@/stores/useAppStore';
@@ -70,8 +71,11 @@ const CategoryGridItem = ({ category }: { category: Category }) => {
 
   // Выводим информацию для отладки
   useEffect(() => {
-    console.log(`Категория: ${category.name}, Icon: ${category.icon}`);
+    console.log(`Категория: ${category.name_ru}, Icon: ${category.icon}`);
   }, [category]);
+
+  // Получаем имя категории в зависимости от языка
+  const categoryName = language === 'ru' ? category.name_ru : category.name_kz;
 
   // Если категория в списке directLinkSlugs, то создаем просто ссылку без всплывающего меню
   if (directLinkSlugs.includes(category.slug)) {
@@ -83,7 +87,7 @@ const CategoryGridItem = ({ category }: { category: Category }) => {
         >
           <CategoryCard 
             icon={IconComponent} 
-            name={category.name || `Категория ${category.id}`}
+            name={categoryName}
           />
         </Button>
       </Link>
@@ -100,26 +104,29 @@ const CategoryGridItem = ({ category }: { category: Category }) => {
         >
           <CategoryCard 
             icon={IconComponent} 
-            name={category.name || `Категория ${category.id}`}
+            name={categoryName}
           />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-64 p-3">
-        <div className="font-medium mb-2 pb-2 border-b">{category.name || `Категория ${category.id}`}</div>
+        <div className="font-medium mb-2 pb-2 border-b">{categoryName}</div>
         {subcategoriesLoading ? (
           <div className="p-2 text-center text-gray-500">Загрузка...</div>
         ) : subcategories.length > 0 ? (
           <div className="grid gap-1 max-h-80 overflow-y-auto">
-            {subcategories.map((subcategory) => (
-              <Link
-                key={subcategory.id}
-                to={`/listings/${subcategory.slug}`}
-                className="block px-3 py-2 text-sm hover:bg-gray-100 rounded-md"
-                onClick={() => setPopoverOpen(false)}
-              >
-                {subcategory.name || `Подкатегория ${subcategory.id}`}
-              </Link>
-            ))}
+            {subcategories.map((subcategory) => {
+              const subcategoryName = language === 'ru' ? subcategory.name_ru : subcategory.name_kz;
+              return (
+                <Link
+                  key={subcategory.id}
+                  to={`/listings/${subcategory.slug}`}
+                  className="block px-3 py-2 text-sm hover:bg-gray-100 rounded-md"
+                  onClick={() => setPopoverOpen(false)}
+                >
+                  {subcategoryName}
+                </Link>
+              );
+            })}
           </div>
         ) : (
           <div className="p-2 text-center text-gray-500">Нет подкатегорий</div>
