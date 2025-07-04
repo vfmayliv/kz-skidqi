@@ -1,6 +1,6 @@
 import { CitySelectionModal } from '@/components/CitySelectionModal';
 import { Header } from '@/components/Header';
-import AllCategoriesButton from '@/components/AllCategoriesButton';
+import CategoryGrid from '@/components/CategoryGrid';
 import { EnhancedFeaturedListings } from '@/components/EnhancedFeaturedListings';
 import { Footer } from '@/components/Footer';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
@@ -51,7 +51,7 @@ const Index = () => {
       <CitySelectionModal />
       <Header />
       <Banner />
-      <AllCategoriesButton />
+      <CategoryGrid />
       <main className="flex-1">
         <EnhancedFeaturedListings />
       </main>
