@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppWithTranslations } from '@/stores/useAppStore';
@@ -12,125 +11,114 @@ import type { Category } from '@/types/category';
 // ID основных категорий
 const MAIN_CATEGORY_IDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
 
-// Функция для получения компонента иконки
-const getIconComponent = (iconName: string | null | undefined) => {
-  if (!iconName) return LucideIcons.LayoutGrid;
-  
-  try {
-    // Проверяем, является ли iconName уже валидным именем компонента
-    // @ts-ignore - Динамический доступ к компонентам
-    if (LucideIcons[iconName]) {
-      // @ts-ignore
-      return LucideIcons[iconName];
-    }
-    
-    // Пытаемся сконвертировать имя из kebab-case в PascalCase
-    const formattedIconName = iconName
-      .split('-')
-      .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-      .join('');
-    
-    // @ts-ignore
-    return LucideIcons[formattedIconName] || LucideIcons.LayoutGrid;
-  } catch (error) {
-    console.error('Ошибка при получении иконки:', error);
-    return LucideIcons.LayoutGrid;
+// Компонент карточки категории для улучшения переиспользуемости
+interface CategoryCardProps {
+  icon: React.ElementType;
+  name: string;
+  loading?: boolean;
+}
+
+const CategoryCard = ({ icon: Icon, name, loading = false }: CategoryCardProps) => {
+  if (loading) {
+    return (
+      <>
+        <div className="h-8 w-8 mb-2 animate-pulse bg-gray-200 rounded-full"></div>
+        <div className="h-4 w-16 animate-pulse bg-gray-200 rounded"></div>
+      </>
+    );
   }
+
+  return (
+    <>
+      <Icon className="h-6 w-6 mb-2" />
+      <span className="text-xs text-center">{name}</span>
+    </>
+  );
 };
 
-// Отображение категорий в виде карточек
-const CategoryCard = ({ icon: Icon, name, loading = false }) => (
-  <div className="flex flex-col items-center justify-center h-full">
-    {loading ? (
-      <>
-        <div className="w-10 h-10 rounded-full bg-gray-200 animate-pulse mb-2"></div>
-        <div className="h-4 bg-gray-200 animate-pulse w-16 rounded"></div>
-      </>
-    ) : (
-      <>
-        <Icon className="w-10 h-10 mb-2 text-primary" />
-        <span className="text-sm font-medium text-center">{name}</span>
-      </>
-    )}
-  </div>
-);
-
-// Компонент для одной кнопки категории в сетке
+// Компонент для одной категории в сетке
 const CategoryGridItem = ({ category }: { category: Category }) => {
   const { language, t } = useAppWithTranslations();
   const [isPopoverOpen, setPopoverOpen] = useState(false);
   
-  // Категории, которые являются прямыми ссылками (без всплывающего меню)
-  const directLinkSlugs = ['property', 'transport', 'free'];
+  // Категории, для которых не нужно выпадающее меню - прямой переход
+  const excludedSlugs = ['property', 'transport', 'free'];
 
   // Получаем подкатегории для данной категории
   const { categories: subcategories, loading: subcategoriesLoading } = useSubcategories(category.id);
 
-  // Получаем компонент иконки
-  const IconComponent = getIconComponent(category.icon);
+  // Получаем компонент иконки - используем тот же подход, что и в CategoryMenu
+  let IconComponent = LucideIcons.LayoutGrid; // Иконка по умолчанию
+  try {
+    // Проверяем, является ли иконка уже именем компонента
+    // @ts-ignore - Динамический доступ к компонентам
+    if (category.icon && LucideIcons[category.icon]) {
+      // @ts-ignore
+      IconComponent = LucideIcons[category.icon];
+    } else if (category.icon) {
+      // Пытаемся преобразовать kebab-case в PascalCase
+      const formattedIconName = category.icon
+        .split('-')
+        .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+        .join('');
+      
+      // @ts-ignore
+      if (LucideIcons[formattedIconName]) {
+        // @ts-ignore
+        IconComponent = LucideIcons[formattedIconName];
+      }
+    }
+  } catch (error) {
+    console.error('Ошибка при получении иконки:', error);
+  }
 
-  // Выводим информацию для отладки
-  useEffect(() => {
-    console.log(`Категория: ${category.name_ru}, Icon: ${category.icon}`);
-  }, [category]);
+  // Проверка на исключаемые категории (прямые ссылки без подкатегорий)
+  const isExcluded = excludedSlugs.includes(category.slug || '');
 
-  // Получаем имя категории в зависимости от языка
-  const categoryName = language === 'ru' ? category.name_ru : category.name_kz;
-
-  // Если категория в списке directLinkSlugs, то создаем просто ссылку без всплывающего меню
-  if (directLinkSlugs.includes(category.slug)) {
+  if (isExcluded) {
     return (
-      <Link to={`/listings/${category.slug}`} className="text-center">
+      <Link to={`/category/${category.slug}`}>
         <Button 
           variant="outline" 
-          className="h-24 w-full p-2 flex flex-col items-center justify-center hover:bg-gray-50 border border-gray-200"
+          className="h-24 w-full p-2 flex flex-col items-center justify-center border border-gray-200"
         >
-          <CategoryCard 
-            icon={IconComponent} 
-            name={categoryName}
-          />
+          <CategoryCard icon={IconComponent} name={category.name || `Категория ${category.id}`} />
         </Button>
       </Link>
     );
   }
 
-  // Для остальных категорий добавляем всплывающее меню с подкатегориями
   return (
     <Popover open={isPopoverOpen} onOpenChange={setPopoverOpen}>
       <PopoverTrigger asChild>
         <Button 
           variant="outline" 
-          className="h-24 w-full p-2 flex flex-col items-center justify-center hover:bg-gray-50 border border-gray-200"
+          className="h-24 w-full p-2 flex flex-col items-center justify-center border border-gray-200"
+          onClick={() => setPopoverOpen(true)}
         >
-          <CategoryCard 
-            icon={IconComponent} 
-            name={categoryName}
-          />
+          <CategoryCard icon={IconComponent} name={category.name || `Категория ${category.id}`} />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-64 p-3">
-        <div className="font-medium mb-2 pb-2 border-b">{categoryName}</div>
-        {subcategoriesLoading ? (
-          <div className="p-2 text-center text-gray-500">Загрузка...</div>
-        ) : subcategories.length > 0 ? (
-          <div className="grid gap-1 max-h-80 overflow-y-auto">
-            {subcategories.map((subcategory) => {
-              const subcategoryName = language === 'ru' ? subcategory.name_ru : subcategory.name_kz;
-              return (
-                <Link
-                  key={subcategory.id}
-                  to={`/listings/${subcategory.slug}`}
-                  className="block px-3 py-2 text-sm hover:bg-gray-100 rounded-md"
-                  onClick={() => setPopoverOpen(false)}
-                >
-                  {subcategoryName}
-                </Link>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="p-2 text-center text-gray-500">Нет подкатегорий</div>
-        )}
+      <PopoverContent className="w-80" align="start">
+        <div className="font-medium mb-2">{category.name}</div>
+        <div className="grid grid-cols-2 gap-2">
+          {subcategoriesLoading ? (
+            <div>Загрузка подкатегорий...</div>
+          ) : subcategories && subcategories.length > 0 ? (
+            subcategories.map(subcat => (
+              <Link 
+                key={subcat.id} 
+                to={`/category/${category.slug}/${subcat.slug}`} 
+                className="hover:underline"
+                onClick={() => setPopoverOpen(false)}
+              >
+                {subcat.name}
+              </Link>
+            ))
+          ) : (
+            <div>Нет подкатегорий</div>
+          )}
+        </div>
       </PopoverContent>
     </Popover>
   );
@@ -138,7 +126,6 @@ const CategoryGridItem = ({ category }: { category: Category }) => {
 
 // Основной компонент сетки категорий
 const CategoryGrid = () => {
-  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [mainCategories, setMainCategories] = useState<Category[]>([]);
   const { language, t } = useAppWithTranslations();
@@ -146,30 +133,30 @@ const CategoryGrid = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        // Получаем все активные категории
+        // Получаем все категории из БД
         const { data: allData, error } = await supabase
           .from('categories')
           .select('*')
-          .eq('is_active', true);
-
+          .order('sort_order', { ascending: true });
+        
         if (error) throw error;
         
-        // Для отладки выводим все полученные категории
-        console.log('Все категории из БД:', allData);
-
-        // Отбираем основные категории по массиву MAIN_CATEGORY_IDS
-        const mainCats = allData
-          .filter(cat => MAIN_CATEGORY_IDS.includes(cat.id))
-          .sort((a, b) => a.sort_order - b.sort_order);
+        console.log('Получены категории:', allData);
         
-        if (mainCats.length > 0) {
-          setMainCategories(mainCats);
-          console.log('Отфильтрованные основные категории:', mainCats);
-        } else {
-          // Запасной вариант - берем первые 13 категорий
-          setMainCategories(allData.slice(0, 13));
-          console.log('Используем первые 13 категорий:', allData.slice(0, 13));
+        if (allData) {
+          // Фильтруем только основные категории по ID из массива MAIN_CATEGORY_IDS
+          const mainCats = allData
+            .filter(cat => MAIN_CATEGORY_IDS.includes(cat.id))
+            .sort((a, b) => a.sort_order - b.sort_order);
+          
+          if (mainCats.length > 0) {
+            setMainCategories(mainCats);
+          } else {
+            // Запасной вариант - берем первые 13 категорий
+            setMainCategories(allData.slice(0, 13));
+          }
         }
+
       } catch (err) {
         console.error('Ошибка при загрузке категорий:', err);
       } finally {
