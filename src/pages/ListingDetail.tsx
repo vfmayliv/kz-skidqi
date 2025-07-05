@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import { Header } from '@/components/Header';
@@ -12,11 +13,10 @@ import { SellerInfo } from '@/components/listing-detail/SellerInfo';
 import { SafetyTips } from '@/components/listing-detail/SafetyTips';
 import { SimilarListings } from '@/components/listing-detail/SimilarListings';
 import LocationMap from '@/components/listing-detail/LocationMap';
-import { mockListings } from '@/data/mockListings';
 import { Listing } from '@/types/listingType';
 import { useAppWithTranslations } from '@/stores/useAppStore';
 import { getCategoryConfig } from '@/categories/categoryRegistry';
-import { parseListingUrl, findListingBySlug, transliterate, getCategoryIdBySlug } from '@/utils/urlUtils';
+import { transliterate, getCategoryIdBySlug } from '@/utils/urlUtils';
 import { useListings } from '@/hooks/useListings';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -64,145 +64,91 @@ export default function ListingDetail() {
       if (categorySlug && titleSlug) {
         console.log('🔍 Поиск по SEO URL:', { categorySlug, titleSlug });
         
-        // Сначала ищем в мок данных по categorySlug и titleSlug
-        const mockListing = mockListings.find(listing => {
-          if (listing.categoryId !== categorySlug) return false;
-          
-          const listingTitleSlug = transliterate(
-            typeof listing.title === 'string' ? listing.title : listing.title?.ru || listing.title?.kz || ''
-          );
-          
-          console.log('🔎 Сравниваем slugs в мок данных:', { 
-            generated: listingTitleSlug, 
-            target: titleSlug,
-            title: listing.title,
-            match: listingTitleSlug === titleSlug
-          });
-          
-          return listingTitleSlug === titleSlug;
-        });
+        try {
+          const categoryId = getCategoryIdBySlug(categorySlug);
+          console.log('📁 Поиск в Supabase по категории:', { categorySlug, categoryId });
 
-        if (mockListing) {
-          console.log('✅ Найдено в мок данных:', mockListing);
-          targetListing = {
-            ...mockListing,
-            seller: {
-              name: mockListing.seller?.name || 'Skidqi',
-              phone: mockListing.seller?.phone || '+7 777 123 45 67',
-              rating: mockListing.seller?.rating || 4.9,
-              reviews: mockListing.seller?.reviews || 156,
-              memberSince: '2022',
-              response: language === 'ru' ? 'Отвечает обычно в течении часа' : 'Әдетте бір сағат ішінде жауап береді',
-              lastOnline: language === 'ru' ? 'Был онлайн сегодня' : 'Бүгін онлайн болды'
-            }
-          };
-        } else {
-          // Если не найдено в мок данных, ищем в Supabase
-          try {
-            const categoryId = getCategoryIdBySlug(categorySlug);
-            console.log('📁 Поиск в Supabase по категории:', { categorySlug, categoryId });
+          if (categoryId) {
+            const { data: listings, error } = await supabase
+              .from('listings')
+              .select(`
+                *,
+                cities(name_ru, name_kz),
+                categories(name_ru, name_kz)
+              `)
+              .eq('category_id', categoryId)
+              .eq('status', 'active');
 
-            if (categoryId) {
-              const { data: listings, error } = await supabase
-                .from('listings')
-                .select(`
-                  *,
-                  cities(name_ru, name_kz),
-                  categories(name_ru, name_kz)
-                `)
-                .eq('category_id', categoryId)
-                .eq('status', 'active');
-
-              if (error) {
-                console.error('❌ Ошибка при поиске в Supabase:', error);
-              } else if (listings && listings.length > 0) {
-                console.log('📋 Найдено объявлений в Supabase:', listings.length);
+            if (error) {
+              console.error('❌ Ошибка при поиске в Supabase:', error);
+            } else if (listings && listings.length > 0) {
+              console.log('📋 Найдено объявлений в Supabase:', listings.length);
+              
+              // Ищем объявление по совпадению slug
+              for (const listingItem of listings) {
+                const listingTitleSlug = transliterate(listingItem.title || '');
+                console.log('🔎 Сравниваем slugs в Supabase:', { 
+                  generated: listingTitleSlug, 
+                  target: titleSlug,
+                  title: listingItem.title,
+                  match: listingTitleSlug === titleSlug
+                });
                 
-                // Ищем объявление по совпадению slug
-                for (const listingItem of listings) {
-                  const listingTitleSlug = transliterate(listingItem.title || '');
-                  console.log('🔎 Сравниваем slugs в Supabase:', { 
-                    generated: listingTitleSlug, 
-                    target: titleSlug,
+                if (listingTitleSlug === titleSlug) {
+                  targetListing = {
+                    id: listingItem.id,
                     title: listingItem.title,
-                    match: listingTitleSlug === titleSlug
-                  });
+                    description: listingItem.description || '',
+                    originalPrice: listingItem.regular_price || 0,
+                    discountPrice: listingItem.discount_price || listingItem.regular_price || 0,
+                    discount: listingItem.discount_percent || 0,
+                    city: listingItem.cities?.name_ru || '',
+                    categoryId: categorySlug,
+                    createdAt: listingItem.created_at,
+                    imageUrl: listingItem.images?.[0] || '/placeholder.svg',
+                    images: listingItem.images || ['/placeholder.svg'],
+                    isFeatured: listingItem.is_premium || false,
+                    views: listingItem.views || 0,
+                    seller: {
+                      name: 'Skidqi',
+                      phone: listingItem.phone || '+7 777 123 45 67',
+                      rating: 4.9,
+                      reviews: 156,
+                      memberSince: '2022',
+                      response: language === 'ru' ? 'Отвечает обычно в течении часа' : 'Әдетте бір сағат ішінде жауап береді',
+                      lastOnline: language === 'ru' ? 'Был онлайн сегодня' : 'Бүгін онлайн болды'
+                    },
+                    coordinates: undefined
+                  };
                   
-                  if (listingTitleSlug === titleSlug) {
-                    targetListing = {
-                      id: listingItem.id,
-                      title: listingItem.title,
-                      description: listingItem.description || '',
-                      originalPrice: listingItem.regular_price || 0,
-                      discountPrice: listingItem.discount_price || listingItem.regular_price || 0,
-                      discount: listingItem.discount_percent || 0,
-                      city: listingItem.cities?.name_ru || '',
-                      categoryId: categorySlug,
-                      createdAt: listingItem.created_at,
-                      imageUrl: listingItem.images?.[0] || '/placeholder.svg',
-                      images: listingItem.images || ['/placeholder.svg'],
-                      isFeatured: listingItem.is_premium || false,
-                      views: listingItem.views || 0,
-                      seller: {
-                        name: 'Skidqi',
-                        phone: listingItem.phone || '+7 777 123 45 67',
-                        rating: 4.9,
-                        reviews: 156,
-                        memberSince: '2022',
-                        response: language === 'ru' ? 'Отвечает обычно в течении часа' : 'Әдетте бір сағат ішінде жауап береді',
-                        lastOnline: language === 'ru' ? 'Был онлайн сегодня' : 'Бүгін онлайн болды'
-                      },
-                      coordinates: undefined
-                    };
-                    
-                    console.log('✅ Найдено объявление в Supabase:', targetListing);
-                    break;
-                  }
+                  console.log('✅ Найдено объявление в Supabase:', targetListing);
+                  break;
                 }
               }
             }
-          } catch (error) {
-            console.error('❌ Ошибка при поиске объявления в Supabase:', error);
           }
+        } catch (error) {
+          console.error('❌ Ошибка при поиске объявления в Supabase:', error);
         }
       } 
       // Если есть старый формат URL с ID
       else if (listingId) {
         console.log('🔍 Поиск по ID:', listingId);
         
-        // Сначала ищем в мок данных
-        const mockListing = mockListings.find(item => item.id === listingId);
-        if (mockListing) {
-          console.log('✅ Найдено в мок данных по ID:', mockListing);
+        const supabaseListing = await getListingById(listingId);
+        if (supabaseListing) {
           targetListing = {
-            ...mockListing,
+            ...supabaseListing,
             seller: {
-              name: mockListing.seller?.name || 'Skidqi',
-              phone: mockListing.seller?.phone || '+7 777 123 45 67',
-              rating: mockListing.seller?.rating || 4.9,
-              reviews: mockListing.seller?.reviews || 156,
+              name: 'Skidqi',
+              phone: supabaseListing.phone || '+7 777 123 45 67',
+              rating: 4.9,
+              reviews: 156,
               memberSince: '2022',
               response: language === 'ru' ? 'Отвечает обычно в течении часа' : 'Әдетте бір сағат ішінде жауап береді',
               lastOnline: language === 'ru' ? 'Был онлайн сегодня' : 'Бүгін онлайн болды'
             }
           };
-        } else {
-          // Если не найдено в мок данных, ищем в Supabase
-          const supabaseListing = await getListingById(listingId);
-          if (supabaseListing) {
-            targetListing = {
-              ...supabaseListing,
-              seller: {
-                name: 'Skidqi',
-                phone: supabaseListing.phone || '+7 777 123 45 67',
-                rating: 4.9,
-                reviews: 156,
-                memberSince: '2022',
-                response: language === 'ru' ? 'Отвечает обычно в течении часа' : 'Әдетте бір сағат ішінде жауап береді',
-                lastOnline: language === 'ru' ? 'Был онлайн сегодня' : 'Бүгін онлайн болды'
-              }
-            };
-          }
         }
       }
 
@@ -214,11 +160,41 @@ export default function ListingDetail() {
       console.log('✅ Итоговое объявление:', targetListing);
       setListing(targetListing);
       
-      // Найти похожие объявления в мок данных
-      const similar = mockListings
-        .filter(item => item.categoryId === targetListing.categoryId && item.id !== targetListing.id)
-        .slice(0, 4);
-      setSimilarListings(similar);
+      // Найти похожие объявления в Supabase
+      if (targetListing.categoryId) {
+        try {
+          const categoryId = getCategoryIdBySlug(targetListing.categoryId);
+          if (categoryId) {
+            const { data: similarData, error } = await supabase
+              .from('listings')
+              .select('*')
+              .eq('category_id', categoryId)
+              .eq('status', 'active')
+              .neq('id', targetListing.id)
+              .limit(4);
+
+            if (!error && similarData) {
+              const similar = similarData.map(item => ({
+                id: item.id,
+                title: item.title,
+                description: item.description || '',
+                originalPrice: item.regular_price || 0,
+                discountPrice: item.discount_price || item.regular_price || 0,
+                discount: item.discount_percent || 0,
+                city: item.city_id?.toString() || '',
+                categoryId: targetListing.categoryId,
+                createdAt: item.created_at,
+                imageUrl: item.images?.[0] || '/placeholder.svg',
+                views: item.views || 0,
+                isFeatured: item.is_premium || false
+              }));
+              setSimilarListings(similar);
+            }
+          }
+        } catch (error) {
+          console.error('❌ Ошибка при поиске похожих объявлений:', error);
+        }
+      }
       
       // Построить breadcrumbs
       const categoryItems = [];
@@ -267,7 +243,7 @@ export default function ListingDetail() {
   const handleShare = () => {
     if (navigator.share) {
       navigator.share({
-        title: listing?.title[language] || '',
+        title: typeof listing?.title === 'string' ? listing.title : '',
         url: window.location.href
       }).catch(err => {
         console.error('Error sharing:', err);
@@ -296,19 +272,14 @@ export default function ListingDetail() {
   // Extract and ensure title and description are strings
   const title = typeof listing.title === 'string' 
     ? listing.title 
-    : (listing.title && typeof listing.title === 'object' && listing.title[language]) 
-      ? listing.title[language] 
-      : '';
+    : '';
       
   const city = typeof listing.city === 'string' 
     ? listing.city 
-    : (listing.city && typeof listing.city === 'object' && listing.city[language]) 
-      ? listing.city[language] 
-      : '';
+    : '';
       
   const descriptionText = listing.description ? 
-    (typeof listing.description === 'string' ? listing.description : 
-     (typeof listing.description === 'object' ? listing.description[language] || '' : '')) 
+    (typeof listing.description === 'string' ? listing.description : '') 
     : '';
 
   return (
@@ -452,13 +423,15 @@ export default function ListingDetail() {
             </div>
           </div>
           
-          <div className="mt-8">
-            <SimilarListings 
-              listings={similarListings}
-              language={language}
-              formatPrice={formatPrice}
-            />
-          </div>
+          {similarListings.length > 0 && (
+            <div className="mt-8">
+              <SimilarListings 
+                listings={similarListings}
+                language={language}
+                formatPrice={formatPrice}
+              />
+            </div>
+          )}
         </div>
       </main>
       <Footer />
