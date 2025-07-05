@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import { Header } from '@/components/Header';
@@ -97,8 +96,10 @@ export default function ListingDetail() {
                 if (listingTitleSlug === titleSlug) {
                   targetListing = {
                     id: listingItem.id,
+                    userId: listingItem.user_id,
                     title: listingItem.title,
                     description: listingItem.description || '',
+                    price: listingItem.regular_price || 0,
                     originalPrice: listingItem.regular_price || 0,
                     discountPrice: listingItem.discount_price || listingItem.regular_price || 0,
                     discount: listingItem.discount_percent || 0,
@@ -109,6 +110,9 @@ export default function ListingDetail() {
                     images: listingItem.images || ['/placeholder.svg'],
                     isFeatured: listingItem.is_premium || false,
                     views: listingItem.views || 0,
+                    regionId: listingItem.region_id?.toString() || '',
+                    cityId: listingItem.city_id?.toString() || '',
+                    microdistrictId: listingItem.microdistrict_id?.toString() || '',
                     seller: {
                       name: 'Skidqi',
                       phone: listingItem.phone || '+7 777 123 45 67',
@@ -176,8 +180,10 @@ export default function ListingDetail() {
             if (!error && similarData) {
               const similar = similarData.map(item => ({
                 id: item.id,
+                userId: item.user_id,
                 title: item.title,
                 description: item.description || '',
+                price: item.regular_price || 0,
                 originalPrice: item.regular_price || 0,
                 discountPrice: item.discount_price || item.regular_price || 0,
                 discount: item.discount_percent || 0,
@@ -186,7 +192,10 @@ export default function ListingDetail() {
                 createdAt: item.created_at,
                 imageUrl: item.images?.[0] || '/placeholder.svg',
                 views: item.views || 0,
-                isFeatured: item.is_premium || false
+                isFeatured: item.is_premium || false,
+                regionId: item.region_id?.toString() || '',
+                cityId: item.city_id?.toString() || '',
+                microdistrictId: item.microdistrict_id?.toString() || ''
               }));
               setSimilarListings(similar);
             }
@@ -196,7 +205,6 @@ export default function ListingDetail() {
         }
       }
       
-      // Построить breadcrumbs
       const categoryItems = [];
       
       categoryItems.push({
@@ -220,7 +228,6 @@ export default function ListingDetail() {
     loadListing();
   }, [listingId, categorySlug, titleSlug, language, location.pathname, getListingById]);
 
-  // Utility functions for formatting
   const formatPrice = (price: number) => {
     if (price === 0) return language === 'ru' ? 'Бесплатно' : 'Тегін';
     return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") + ' ₸';
@@ -235,7 +242,6 @@ export default function ListingDetail() {
     }).format(date);
   };
   
-  // Event handlers
   const handleToggleFavorite = () => {
     setIsFavorite(!isFavorite);
   };
@@ -269,7 +275,6 @@ export default function ListingDetail() {
     );
   }
 
-  // Extract and ensure title and description are strings
   const title = typeof listing.title === 'string' 
     ? listing.title 
     : '';
@@ -291,7 +296,6 @@ export default function ListingDetail() {
       />
       <main className="flex-1 py-6">
         <div className="container mx-auto px-4 max-w-7xl">
-          {/* Mobile layout */}
           <div className="lg:hidden space-y-4">
             <ListingGallery 
               images={listing.images || [listing.imageUrl]} 
@@ -361,7 +365,6 @@ export default function ListingDetail() {
             <SafetyTips language={language} />
           </div>
 
-          {/* Desktop layout */}
           <div className="hidden lg:grid grid-cols-3 gap-6">
             <div className="col-span-2 space-y-6">
               <ListingGallery 
