@@ -25,7 +25,7 @@ export function transliterate(text: string): string {
     .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
 }
 
-// Маппинг slug категорий к их ID
+// Исправленный маппинг - теперь поддерживает как строковые slug, так и числовые ID
 const categorySlugToId: Record<string, number> = {
   'electronics': 3,
   'transport': 1,
@@ -39,7 +39,21 @@ const categorySlugToId: Record<string, number> = {
   'beauty': 10,
   'food': 11,
   'pharmacy': 12,
-  'free': 13
+  'free': 13,
+  // Добавляем поддержку числовых ID как строк
+  '1': 1,
+  '2': 2,
+  '3': 3,
+  '4': 4,
+  '5': 5,
+  '6': 6,
+  '7': 7,
+  '8': 8,
+  '9': 9,
+  '10': 10,
+  '11': 11,
+  '12': 12,
+  '13': 13
 };
 
 // Создание SEO-friendly URL для объявления БЕЗ ID - чистый путь без префиксов
@@ -61,7 +75,7 @@ export function findListingBySlug(listings: any[], categorySlug: string, titleSl
   });
 }
 
-// Получение ID категории по slug
+// Получение ID категории по slug - теперь поддерживает числовые ID
 export function getCategoryIdBySlug(categorySlug: string): number | null {
   return categorySlugToId[categorySlug] || null;
 }

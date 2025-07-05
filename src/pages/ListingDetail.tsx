@@ -129,6 +129,8 @@ export default function ListingDetail() {
                   break;
                 }
               }
+            } else {
+              console.log('❌ Не удалось получить categoryId для:', categorySlug);
             }
           }
         } catch (error) {
