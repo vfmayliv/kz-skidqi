@@ -44,9 +44,7 @@ export default function ListingDetail() {
     titleSlug?: string; 
   }>();
   
-  // Handle case where params might be undefined
   const { id: listingId, categorySlug, titleSlug } = params || {};
-  
   const { language } = useAppWithTranslations();
   const location = useLocation();
   const [listing, setListing] = useState<ExtendedListing | null>(null);
@@ -60,83 +58,77 @@ export default function ListingDetail() {
     const loadListing = async () => {
       let targetListing = null;
       
+      console.log('🔍 Загрузка объявления:', { listingId, categorySlug, titleSlug });
+      
       // Если есть SEO URL (category + title slug)
       if (categorySlug && titleSlug) {
         console.log('🔍 Поиск по SEO URL:', { categorySlug, titleSlug });
         
-        try {
-          // Получаем ID категории по slug
-          const categoryId = getCategoryIdBySlug(categorySlug);
-          console.log('📁 Найден ID категории:', { categorySlug, categoryId });
+        // Сначала ищем в мок данных по categorySlug и titleSlug
+        const mockListing = mockListings.find(listing => {
+          if (listing.categoryId !== categorySlug) return false;
+          
+          const listingTitleSlug = transliterate(
+            typeof listing.title === 'string' ? listing.title : listing.title?.ru || listing.title?.kz || ''
+          );
+          
+          console.log('🔎 Сравниваем slugs в мок данных:', { 
+            generated: listingTitleSlug, 
+            target: titleSlug,
+            title: listing.title,
+            match: listingTitleSlug === titleSlug
+          });
+          
+          return listingTitleSlug === titleSlug;
+        });
 
-          if (categoryId) {
-            // Ищем объявления в этой категории
-            const { data: listings, error } = await supabase
-              .from('listings')
-              .select(`
-                *,
-                cities(name_ru, name_kz),
-                categories(name_ru, name_kz)
-              `)
-              .eq('category_id', categoryId)
-              .eq('status', 'active');
+        if (mockListing) {
+          console.log('✅ Найдено в мок данных:', mockListing);
+          targetListing = {
+            ...mockListing,
+            seller: {
+              name: mockListing.seller?.name || 'Skidqi',
+              phone: mockListing.seller?.phone || '+7 777 123 45 67',
+              rating: mockListing.seller?.rating || 4.9,
+              reviews: mockListing.seller?.reviews || 156,
+              memberSince: '2022',
+              response: language === 'ru' ? 'Отвечает обычно в течении часа' : 'Әдетте бір сағат ішінде жауап береді',
+              lastOnline: language === 'ru' ? 'Был онлайн сегодня' : 'Бүгін онлайн болды'
+            }
+          };
+        } else {
+          // Если не найдено в мок данных, ищем в Supabase
+          try {
+            const categoryId = getCategoryIdBySlug(categorySlug);
+            console.log('📁 Поиск в Supabase по категории:', { categorySlug, categoryId });
 
-            if (error) {
-              console.error('❌ Ошибка при поиске объявлений:', error);
-            } else if (listings) {
-              console.log('📋 Найдено объявлений в категории:', listings.length);
-              console.log('📋 Первые 3 объявления:', listings.slice(0, 3));
-              
-              // Ищем объявление по совпадению slug
-              for (const listingItem of listings) {
-                const listingTitleSlug = transliterate(listingItem.title || '');
-                console.log('🔎 Сравниваем slugs:', { 
-                  generated: listingTitleSlug, 
-                  target: titleSlug,
-                  title: listingItem.title,
-                  match: listingTitleSlug === titleSlug
-                });
+            if (categoryId) {
+              const { data: listings, error } = await supabase
+                .from('listings')
+                .select(`
+                  *,
+                  cities(name_ru, name_kz),
+                  categories(name_ru, name_kz)
+                `)
+                .eq('category_id', categoryId)
+                .eq('status', 'active');
+
+              if (error) {
+                console.error('❌ Ошибка при поиске в Supabase:', error);
+              } else if (listings && listings.length > 0) {
+                console.log('📋 Найдено объявлений в Supabase:', listings.length);
                 
-                if (listingTitleSlug === titleSlug) {
-                  // Преобразуем данные из Supabase в формат Listing
-                  targetListing = {
-                    id: listingItem.id,
-                    title: listingItem.title,
-                    description: listingItem.description || '',
-                    originalPrice: listingItem.regular_price || 0,
-                    discountPrice: listingItem.discount_price || listingItem.regular_price || 0,
-                    discount: listingItem.discount_percent || 0,
-                    city: listingItem.cities?.name_ru || '',
-                    categoryId: categorySlug,
-                    createdAt: listingItem.created_at,
-                    imageUrl: listingItem.images?.[0] || '/placeholder.svg',
-                    images: listingItem.images || ['/placeholder.svg'],
-                    isFeatured: listingItem.is_premium || false,
-                    views: listingItem.views || 0,
-                    seller: {
-                      name: 'Продавец',
-                      phone: listingItem.phone || '+7 XXX XXX XX XX',
-                      rating: 4.8,
-                      reviews: 25,
-                      memberSince: '2022',
-                      response: language === 'ru' ? 'Отвечает обычно в течении часа' : 'Әдетте бір сағат ішінде жауап береді',
-                      lastOnline: language === 'ru' ? 'Был онлайн сегодня' : 'Бүгін онлайн болды'
-                    },
-                    coordinates: undefined
-                  };
-                  
-                  console.log('✅ Найдено объявление по slug:', targetListing);
-                  break;
-                }
-              }
-              
-              // Если точное совпадение не найдено, ищем частичное
-              if (!targetListing && listings.length > 0) {
-                console.log('🔄 Поиск частичного совпадения...');
+                // Ищем объявление по совпадению slug
                 for (const listingItem of listings) {
                   const listingTitleSlug = transliterate(listingItem.title || '');
-                  // Проверяем частичное совпадение (первые 20 символов)
-                  if (listingTitleSlug.includes(titleSlug.slice(0, 20)) || titleSlug.includes(listingTitleSlug.slice(0, 20))) {
+                  console.log('🔎 Сравниваем slugs в Supabase:', { 
+                    generated: listingTitleSlug, 
+                    target: titleSlug,
+                    title: listingItem.title,
+                    match: listingTitleSlug === titleSlug
+                  });
+                  
+                  if (listingTitleSlug === titleSlug) {
                     targetListing = {
                       id: listingItem.id,
                       title: listingItem.title,
@@ -152,44 +144,25 @@ export default function ListingDetail() {
                       isFeatured: listingItem.is_premium || false,
                       views: listingItem.views || 0,
                       seller: {
-                        name: 'Продавец',
-                        phone: listingItem.phone || '+7 XXX XXX XX XX',
-                        rating: 4.8,
-                        reviews: 25,
+                        name: 'Skidqi',
+                        phone: listingItem.phone || '+7 777 123 45 67',
+                        rating: 4.9,
+                        reviews: 156,
                         memberSince: '2022',
                         response: language === 'ru' ? 'Отвечает обычно в течении часа' : 'Әдетте бір сағат ішінде жауап береді',
                         lastOnline: language === 'ru' ? 'Был онлайн сегодня' : 'Бүгін онлайн болды'
                       },
                       coordinates: undefined
                     };
-                    console.log('✅ Найдено объявление по частичному совпадению:', targetListing);
+                    
+                    console.log('✅ Найдено объявление в Supabase:', targetListing);
                     break;
                   }
                 }
               }
             }
-          }
-        } catch (error) {
-          console.error('❌ Ошибка при поиске объявления:', error);
-        }
-
-        // Fallback к мок данным, если не найдено в Supabase
-        if (!targetListing) {
-          console.log('🔄 Fallback к мок данным');
-          const mockListing = findListingBySlug(mockListings, categorySlug, titleSlug);
-          if (mockListing) {
-            targetListing = {
-              ...mockListing,
-              seller: {
-                name: mockListing.seller?.name || 'Продавец',
-                phone: mockListing.seller?.phone || '+7 XXX XXX XX XX',
-                rating: mockListing.seller?.rating || 4.8,
-                reviews: mockListing.seller?.reviews || 25,
-                memberSince: '2022',
-                response: language === 'ru' ? 'Отвечает обычно в течении часа' : 'Әдетте бір сағат ішінде жауап береді',
-                lastOnline: language === 'ru' ? 'Был онлайн сегодня' : 'Бүгін онлайн болды'
-              }
-            };
+          } catch (error) {
+            console.error('❌ Ошибка при поиске объявления в Supabase:', error);
           }
         }
       } 
@@ -197,32 +170,33 @@ export default function ListingDetail() {
       else if (listingId) {
         console.log('🔍 Поиск по ID:', listingId);
         
-        // Пробуем найти в Supabase
-        const supabaseListing = await getListingById(listingId);
-        if (supabaseListing) {
+        // Сначала ищем в мок данных
+        const mockListing = mockListings.find(item => item.id === listingId);
+        if (mockListing) {
+          console.log('✅ Найдено в мок данных по ID:', mockListing);
           targetListing = {
-            ...supabaseListing,
+            ...mockListing,
             seller: {
-              name: 'Продавец',
-              phone: supabaseListing.phone || '+7 XXX XXX XX XX',
-              rating: 4.8,
-              reviews: 25,
+              name: mockListing.seller?.name || 'Skidqi',
+              phone: mockListing.seller?.phone || '+7 777 123 45 67',
+              rating: mockListing.seller?.rating || 4.9,
+              reviews: mockListing.seller?.reviews || 156,
               memberSince: '2022',
               response: language === 'ru' ? 'Отвечает обычно в течении часа' : 'Әдетте бір сағат ішінде жауап береді',
               lastOnline: language === 'ru' ? 'Был онлайн сегодня' : 'Бүгін онлайн болды'
             }
           };
         } else {
-          // Fallback к мок данным
-          const mockListing = mockListings.find(item => item.id === listingId);
-          if (mockListing) {
+          // Если не найдено в мок данных, ищем в Supabase
+          const supabaseListing = await getListingById(listingId);
+          if (supabaseListing) {
             targetListing = {
-              ...mockListing,
+              ...supabaseListing,
               seller: {
-                name: mockListing.seller?.name || 'Продавец',
-                phone: mockListing.seller?.phone || '+7 XXX XXX XX XX',
-                rating: mockListing.seller?.rating || 4.8,
-                reviews: mockListing.seller?.reviews || 25,
+                name: 'Skidqi',
+                phone: supabaseListing.phone || '+7 777 123 45 67',
+                rating: 4.9,
+                reviews: 156,
                 memberSince: '2022',
                 response: language === 'ru' ? 'Отвечает обычно в течении часа' : 'Әдетте бір сағат ішінде жауап береді',
                 lastOnline: language === 'ru' ? 'Был онлайн сегодня' : 'Бүгін онлайн болды'
@@ -237,25 +211,10 @@ export default function ListingDetail() {
         return;
       }
 
-      console.log('✅ Загружено объявление:', targetListing);
+      console.log('✅ Итоговое объявление:', targetListing);
+      setListing(targetListing);
       
-      // Устанавливаем реальные данные продавца
-      const listingWithRealSeller = {
-        ...targetListing,
-        seller: {
-          name: 'Skidqi',
-          phone: '+7 777 123 45 67',
-          rating: 4.9,
-          reviews: 156,
-          memberSince: '2022',
-          response: language === 'ru' ? 'Отвечает обычно в течении часа' : 'Әдетте бір сағат ішінде жауап береді',
-          lastOnline: language === 'ru' ? 'Был онлайн сегодня' : 'Бүгін онлайн болды'
-        }
-      };
-      
-      setListing(listingWithRealSeller);
-      
-      // Найти похожие объявления
+      // Найти похожие объявления в мок данных
       const similar = mockListings
         .filter(item => item.categoryId === targetListing.categoryId && item.id !== targetListing.id)
         .slice(0, 4);
