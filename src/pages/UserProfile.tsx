@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { processImageForUpload } from '@/utils/imageUtils';
 import { useNavigate } from 'react-router-dom';
+import { useListings } from '@/hooks/useListings';
 
 // Import profile components
 import { MyListings } from '@/components/profile/MyListings';
@@ -18,23 +19,18 @@ import { MessagesInbox } from '@/components/profile/MessagesInbox';
 import { ReviewsList } from '@/components/profile/ReviewsList';
 import { NotificationsList } from '@/components/profile/NotificationsList';
 
-// User listings and messages localStorage keys (temporary)
-const USER_LISTINGS_KEY = 'userListings';
-const USER_MESSAGES_KEY = 'userMessages';
-const USER_REVIEWS_KEY = 'userReviews';
-const USER_NOTIFICATIONS_KEY = 'userNotifications';
-
 const UserProfile = () => {
   const { language } = useAppContext();
   const { user: authUser, supabase, loading: authLoading } = useSupabase();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('profile');
+  const { getUserListings } = useListings();
   
   // Combined loading state
   const [isInitializing, setIsInitializing] = useState(true);
   
-  // User profile state (start with empty values, no mock data)
+  // User profile state
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -45,27 +41,19 @@ const UserProfile = () => {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [newAvatarFile, setNewAvatarFile] = useState<File | null>(null);
   
-  // User listings (temporary localStorage)
+  // Real data from Supabase
   const [userListings, setUserListings] = useState<any[]>([]);
-  
-  // User messages (temporary localStorage)
   const [messages, setMessages] = useState<any[]>([]);
-  
-  // User reviews (temporary localStorage)
   const [reviews, setReviews] = useState<any[]>([]);
-  
-  // User notifications (temporary localStorage)
   const [notifications, setNotifications] = useState<any[]>([]);
   
   // Authentication and profile data loading
   useEffect(() => {
     const initializeProfile = async () => {
-      // Wait for auth loading to complete
       if (authLoading) {
         return;
       }
 
-      // If user is not authenticated, redirect to login
       if (!authUser) {
         toast({
           title: language === 'ru' ? 'Доступ запрещен' : 'Қол жеткізу тыйым салынған',
@@ -78,10 +66,10 @@ const UserProfile = () => {
         return;
       }
 
-      // If user is authenticated, load profile data
       setEmail(authUser.email || '');
       
       try {
+        // Load profile data
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('first_name, last_name, phone, avatar_url')
@@ -90,19 +78,24 @@ const UserProfile = () => {
 
         if (profileError && profileError.code !== 'PGRST116') {
           console.error('Ошибка загрузки профиля:', profileError);
-          toast({
-            title: language === 'ru' ? 'Ошибка загрузки профиля' : 'Профильді жүктеу қатесі',
-            description: profileError.message,
-            variant: 'destructive'
-          });
         } else if (profileData) {
-          // Load real data from Supabase
           setFirstName(profileData.first_name || '');
           setLastName(profileData.last_name || '');
           setPhone(profileData.phone || '');
           setAvatarUrl(profileData.avatar_url || null);
         }
-        // If no profile data exists yet (new user), keep empty strings
+
+        // Load real user listings from Supabase
+        await loadUserListings();
+        
+        // Load real messages from Supabase
+        await loadUserMessages();
+        
+        // Load real notifications from Supabase
+        await loadUserNotifications();
+        
+        // Load real reviews from Supabase (placeholder for now)
+        setReviews([]);
         
       } catch (e) {
         console.error('Исключение при загрузке профиля:', e);
@@ -113,107 +106,115 @@ const UserProfile = () => {
         });
       }
 
-      // Load temporary data from localStorage
-      loadTemporaryData();
-      
-      // Mark initialization as complete
       setIsInitializing(false);
     };
 
     initializeProfile();
-
   }, [authUser, authLoading, supabase, language, toast, navigate]);
 
-  // Function to load temporary data (messages, reviews, etc.)
-  const loadTemporaryData = () => {
-    // Load listings
-    const savedListings = localStorage.getItem(USER_LISTINGS_KEY);
-    if (savedListings) {
-      try {
-        const listingsData = JSON.parse(savedListings);
-        setUserListings(listingsData);
-      } catch (error) {
-        console.error('Error loading user listings:', error);
-        setUserListings([]);
-      }
-    } else {
+  // Load user's real listings from Supabase
+  const loadUserListings = async () => {
+    if (!authUser) return;
+
+    try {
+      const listings = await getUserListings();
+      console.log('📋 Загруженные объявления пользователя:', listings);
+      
+      // Transform Supabase data to match expected format
+      const transformedListings = listings.map(listing => ({
+        id: listing.id,
+        title: listing.title,
+        description: listing.description || '',
+        price: listing.regular_price || 0,
+        originalPrice: listing.regular_price || 0,
+        discountPrice: listing.discount_price || listing.regular_price || 0,
+        discount: listing.discount_percent || 0,
+        city: listing.city_id?.toString() || '',
+        categoryId: listing.category_id?.toString() || '',
+        createdAt: listing.created_at,
+        imageUrl: listing.images?.[0] || '/placeholder.svg',
+        views: listing.views || 0,
+        isFeatured: listing.is_premium || false,
+        userId: listing.user_id,
+        regionId: listing.region_id?.toString() || '',
+        cityId: listing.city_id?.toString() || '',
+        microdistrictId: listing.microdistrict_id?.toString() || ''
+      }));
+      
+      setUserListings(transformedListings);
+    } catch (error) {
+      console.error('Ошибка загрузки объявлений пользователя:', error);
       setUserListings([]);
     }
-    
-    // Load messages
-    const savedMessages = localStorage.getItem(USER_MESSAGES_KEY);
-    if (savedMessages) {
-      try {
-        setMessages(JSON.parse(savedMessages));
-      } catch (error) {
-        console.error('Error loading messages:', error);
+  };
+
+  // Load user's real messages from Supabase
+  const loadUserMessages = async () => {
+    if (!authUser) return;
+
+    try {
+      const { data: messagesData, error } = await supabase
+        .from('messages')
+        .select(`
+          *,
+          sender:profiles!messages_sender_id_fkey(first_name, last_name),
+          receiver:profiles!messages_receiver_id_fkey(first_name, last_name)
+        `)
+        .or(`sender_id.eq.${authUser.id},receiver_id.eq.${authUser.id}`)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Ошибка загрузки сообщений:', error);
         setMessages([]);
+        return;
       }
-    } else {
-      const exampleMessages = [
-        {
-          id: 1,
-          sender: 'Асқар Жұмабаев',
-          content: language === 'ru' ? 'Здравствуйте, интересует ваше объявление' : 'Сәлеметсіз бе, сіздің хабарландыруыңыз қызықтырады',
-          date: new Date().toISOString(),
-          read: false
-        }
-      ];
-      setMessages(exampleMessages);
-      localStorage.setItem(USER_MESSAGES_KEY, JSON.stringify(exampleMessages));
+
+      const transformedMessages = messagesData?.map(msg => ({
+        id: msg.id,
+        sender: msg.sender_id === authUser.id 
+          ? language === 'ru' ? 'Вы' : 'Сіз'
+          : `${msg.sender?.first_name || ''} ${msg.sender?.last_name || ''}`.trim() || 'Пользователь',
+        content: msg.content,
+        date: msg.created_at,
+        read: msg.read || msg.sender_id === authUser.id
+      })) || [];
+
+      setMessages(transformedMessages);
+    } catch (error) {
+      console.error('Ошибка загрузки сообщений:', error);
+      setMessages([]);
     }
-    
-    // Load reviews
-    const savedReviews = localStorage.getItem(USER_REVIEWS_KEY);
-    if (savedReviews) {
-      try {
-        setReviews(JSON.parse(savedReviews));
-      } catch (error) {
-        console.error('Error loading reviews:', error);
-        setReviews([]);
-      }
-    } else {
-      const exampleReviews = [
-        {
-          id: 1,
-          author: 'Мария К.',
-          rating: 5,
-          comment: language === 'ru' ? 'Отличный продавец, быстрая доставка!' : 'Керемет сатушы, жылдам жеткізу!',
-          date: new Date().toISOString()
-        }
-      ];
-      setReviews(exampleReviews);
-      localStorage.setItem(USER_REVIEWS_KEY, JSON.stringify(exampleReviews));
-    }
-    
-    // Load notifications
-    const savedNotifications = localStorage.getItem(USER_NOTIFICATIONS_KEY);
-    if (savedNotifications) {
-      try {
-        setNotifications(JSON.parse(savedNotifications));
-      } catch (error) {
-        console.error('Error loading notifications:', error);
+  };
+
+  // Load user's real notifications from Supabase
+  const loadUserNotifications = async () => {
+    if (!authUser) return;
+
+    try {
+      const { data: notificationsData, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', authUser.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Ошибка загрузки уведомлений:', error);
         setNotifications([]);
+        return;
       }
-    } else {
-      const exampleNotifications = [
-        {
-          id: 1,
-          title: language === 'ru' ? 'Новое сообщение' : 'Жаңа хабарлама',
-          content: language === 'ru' ? 'У вас новое сообщение от пользователя Асқар Жұмабаев' : 'Сізде Асқар Жұмабаевтан жаңа хабарлама бар',
-          date: new Date().toISOString(),
-          read: false
-        },
-        {
-          id: 2,
-          title: language === 'ru' ? 'Новый отзыв' : 'Жаңа пікір',
-          content: language === 'ru' ? 'Пользователь оставил вам новый отзыв' : 'Пайдаланушы сізге жаңа пікір қалдырды',
-          date: new Date(Date.now() - 86400000).toISOString(),
-          read: true
-        }
-      ];
-      setNotifications(exampleNotifications);
-      localStorage.setItem(USER_NOTIFICATIONS_KEY, JSON.stringify(exampleNotifications));
+
+      const transformedNotifications = notificationsData?.map(notif => ({
+        id: notif.id,
+        title: notif.title,
+        content: notif.content,
+        date: notif.created_at,
+        read: notif.is_read
+      })) || [];
+
+      setNotifications(transformedNotifications);
+    } catch (error) {
+      console.error('Ошибка загрузки уведомлений:', error);
+      setNotifications([]);
     }
   };
   
@@ -221,10 +222,7 @@ const UserProfile = () => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       
-      // Process image for upload
       const processedFile = await processImageForUpload(file);
-      
-      // Create a preview URL
       const previewUrl = URL.createObjectURL(processedFile);
       setAvatarUrl(previewUrl);
       setNewAvatarFile(processedFile);
@@ -246,7 +244,6 @@ const UserProfile = () => {
       return;
     }
 
-    // Basic validation
     if (!firstName.trim() || !lastName.trim()) {
       toast({
         title: language === 'ru' ? 'Ошибка валидации' : 'Тексеру қатесі',
@@ -258,7 +255,6 @@ const UserProfile = () => {
 
     let processedAvatarUrl = avatarUrl;
 
-    // Handle avatar upload if new file is selected
     if (newAvatarFile) {
       try {
         const filePath = `avatars/${authUser.id}/${Date.now()}_${newAvatarFile.name}`;
@@ -288,7 +284,6 @@ const UserProfile = () => {
       }
     }
 
-    // Save profile data to Supabase
     const profileDataToSave = {
       id: authUser.id,
       first_name: firstName.trim(),
@@ -323,7 +318,6 @@ const UserProfile = () => {
   
   const handleLanguageChange = (lang: 'ru' | 'kz') => {
     if (language !== lang) {
-      // This should be handled by AppContext
       toast({
         title: lang === 'ru' ? 'Язык изменен' : 'Тіл өзгертілді',
         description: lang === 'ru' 
@@ -333,7 +327,6 @@ const UserProfile = () => {
     }
   };
   
-  // Helper functions
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return new Intl.DateTimeFormat(language === 'ru' ? 'ru-RU' : 'kk-KZ', {
@@ -345,23 +338,39 @@ const UserProfile = () => {
     }).format(date);
   };
   
-  const markNotificationAsRead = (id: number) => {
-    const updatedNotifications = notifications.map(notification => {
-      if (notification.id === id) {
-        return { ...notification, read: true };
+  const markNotificationAsRead = async (id: string) => {
+    if (!authUser) return;
+
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('id', id)
+        .eq('user_id', authUser.id);
+
+      if (error) {
+        console.error('Ошибка обновления уведомления:', error);
+        return;
       }
-      return notification;
-    });
-    
-    setNotifications(updatedNotifications);
-    localStorage.setItem(USER_NOTIFICATIONS_KEY, JSON.stringify(updatedNotifications));
+
+      // Update local state
+      const updatedNotifications = notifications.map(notification => {
+        if (notification.id === id) {
+          return { ...notification, read: true };
+        }
+        return notification;
+      });
+      
+      setNotifications(updatedNotifications);
+    } catch (error) {
+      console.error('Ошибка при отметке уведомления как прочитанного:', error);
+    }
   };
   
   const getUnreadCount = (items: any[]) => {
     return items.filter(item => !item.read).length;
   };
 
-  // Show loading spinner only during initial loading
   if (isInitializing) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -501,9 +510,9 @@ const UserProfile = () => {
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">
-                        {language === 'ru' ? 'Избранное:' : 'Таңдаулы:'}
+                        {language === 'ru' ? 'Сообщения:' : 'Хабарламалар:'}
                       </span>
-                      <span className="font-medium">5</span>
+                      <span className="font-medium">{messages.length}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -548,7 +557,6 @@ const UserProfile = () => {
                   <Tabs value={activeTab}>
                     <TabsContent value="profile" className="space-y-4">
                       {isEditingProfile ? (
-                        // Edit profile form
                         <div className="space-y-4">
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
@@ -607,7 +615,6 @@ const UserProfile = () => {
                           </Button>
                         </div>
                       ) : (
-                        // Profile info
                         <div className="space-y-4">
                           <div className="grid grid-cols-2 gap-4">
                             <div>
