@@ -5,7 +5,7 @@ import { useAppContext } from '@/contexts/AppContext';
 import { Bell } from 'lucide-react';
 
 interface Notification {
-  id: number;
+  id: string;
   title: string;
   content: string;
   date: string;
@@ -15,7 +15,7 @@ interface Notification {
 interface NotificationsListProps {
   notifications: Notification[];
   formatDate: (date: string) => string;
-  onMarkAsRead: (id: number) => void;
+  onMarkAsRead: (id: string) => void;
 }
 
 export const NotificationsList: React.FC<NotificationsListProps> = ({ 

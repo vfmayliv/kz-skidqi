@@ -153,13 +153,10 @@ const UserProfile = () => {
     if (!authUser) return;
 
     try {
+      // First get messages
       const { data: messagesData, error } = await supabase
         .from('messages')
-        .select(`
-          *,
-          sender:profiles!messages_sender_id_fkey(first_name, last_name),
-          receiver:profiles!messages_receiver_id_fkey(first_name, last_name)
-        `)
+        .select('*')
         .or(`sender_id.eq.${authUser.id},receiver_id.eq.${authUser.id}`)
         .order('created_at', { ascending: false });
 
@@ -169,15 +166,42 @@ const UserProfile = () => {
         return;
       }
 
-      const transformedMessages = messagesData?.map(msg => ({
-        id: msg.id,
-        sender: msg.sender_id === authUser.id 
-          ? language === 'ru' ? 'Вы' : 'Сіз'
-          : `${msg.sender?.first_name || ''} ${msg.sender?.last_name || ''}`.trim() || 'Пользователь',
-        content: msg.content,
-        date: msg.created_at,
-        read: msg.read || msg.sender_id === authUser.id
-      })) || [];
+      // Get sender profiles separately
+      const senderIds = messagesData?.map(msg => msg.sender_id).filter(id => id !== authUser.id) || [];
+      const uniqueSenderIds = [...new Set(senderIds)];
+
+      let senderProfiles: any = {};
+      if (uniqueSenderIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name')
+          .in('id', uniqueSenderIds);
+
+        profilesData?.forEach(profile => {
+          senderProfiles[profile.id] = profile;
+        });
+      }
+
+      const transformedMessages = messagesData?.map(msg => {
+        let senderName = language === 'ru' ? 'Вы' : 'Сіз';
+        
+        if (msg.sender_id !== authUser.id) {
+          const profile = senderProfiles[msg.sender_id];
+          if (profile) {
+            senderName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Пользователь';
+          } else {
+            senderName = 'Пользователь';
+          }
+        }
+
+        return {
+          id: msg.id,
+          sender: senderName,
+          content: msg.content,
+          date: msg.created_at,
+          read: msg.read || msg.sender_id === authUser.id
+        };
+      }) || [];
 
       setMessages(transformedMessages);
     } catch (error) {
