@@ -1,7 +1,7 @@
+
 import { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
-import { useAppContext } from '@/contexts/AppContext';
 import { useSupabase } from '@/contexts/SupabaseContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +13,8 @@ import { processImageForUpload } from '@/utils/imageUtils';
 import { useNavigate } from 'react-router-dom';
 import { useListings } from '@/hooks/useListings';
 import { useFavorites } from '@/hooks/useFavorites';
+import { useTranslation } from '@/hooks/use-translation';
+import { useAppStore } from '@/stores/useAppStore';
 
 // Import profile components
 import { MyListings } from '@/components/profile/MyListings';
@@ -21,7 +23,8 @@ import { ReviewsList } from '@/components/profile/ReviewsList';
 import { NotificationsList } from '@/components/profile/NotificationsList';
 
 const UserProfile = () => {
-  const { language } = useAppContext();
+  const { t } = useTranslation();
+  const { language, setLanguage } = useAppStore();
   const { user: authUser, supabase, loading: authLoading } = useSupabase();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -60,10 +63,8 @@ const UserProfile = () => {
 
       if (!authUser) {
         toast({
-          title: language === 'ru' ? 'Доступ запрещен' : 'Қол жеткізу тыйым салынған',
-          description: language === 'ru' 
-            ? 'Пожалуйста, войдите в систему.' 
-            : 'Жүйеге кіріңіз.',
+          title: t('access.denied'),
+          description: t('please.login'),
           variant: 'destructive'
         });
         navigate('/login');
@@ -104,7 +105,7 @@ const UserProfile = () => {
       } catch (e) {
         console.error('Исключение при загрузке профиля:', e);
         toast({
-          title: language === 'ru' ? 'Исключение при загрузке профиля' : 'Профильді жүктеу кезіндегі қате',
+          title: t('profile.load.error'),
           description: (e as Error).message,
           variant: 'destructive'
         });
@@ -114,7 +115,7 @@ const UserProfile = () => {
     };
 
     initializeProfile();
-  }, [authUser, authLoading, supabase, language, toast, navigate]);
+  }, [authUser, authLoading, supabase, t, toast, navigate]);
 
   // Load user's real listings from Supabase
   const loadUserListings = async () => {
@@ -201,14 +202,14 @@ const UserProfile = () => {
       }
 
       const transformedMessages = messagesData?.map(msg => {
-        let senderName = language === 'ru' ? 'Вы' : 'Сіз';
+        let senderName = t('user');
         
         if (msg.sender_id !== authUser.id) {
           const profile = senderProfiles[msg.sender_id];
           if (profile) {
-            senderName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Пользователь';
+            senderName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || t('user');
           } else {
-            senderName = 'Пользователь';
+            senderName = t('user');
           }
         }
 
@@ -271,14 +272,14 @@ const UserProfile = () => {
         setNewAvatarFile(processedFile);
         
         toast({
-          title: language === 'ru' ? 'Фото загружено' : 'Фото жүктелді',
-          description: language === 'ru' ? 'Фото профиля обновлено' : 'Профиль фотосы жаңартылды',
+          title: t('photo.uploaded'),
+          description: t('photo.updated'),
         });
       } catch (error) {
         console.error('Ошибка обработки изображения:', error);
         toast({
-          title: language === 'ru' ? 'Ошибка' : 'Қате',
-          description: language === 'ru' ? 'Не удалось обработать изображение' : 'Суретті өңдеу мүмкін болмады',
+          title: t('error'),
+          description: t('image.processing.error'),
           variant: 'destructive'
         });
       }
@@ -288,8 +289,8 @@ const UserProfile = () => {
   const handleProfileSave = async () => {
     if (!authUser || !supabase) {
       toast({
-        title: language === 'ru' ? 'Ошибка' : 'Қате',
-        description: language === 'ru' ? 'Сессия не найдена' : 'Сессия табылмады',
+        title: t('error'),
+        description: t('session.not.found'),
         variant: 'destructive'
       });
       return;
@@ -297,8 +298,8 @@ const UserProfile = () => {
 
     if (!firstName.trim() || !lastName.trim()) {
       toast({
-        title: language === 'ru' ? 'Ошибка валидации' : 'Тексеру қатесі',
-        description: language === 'ru' ? 'Имя и фамилия обязательны' : 'Аты мен тегі міндетті',
+        title: t('validation.error'),
+        description: t('name.required'),
         variant: 'destructive'
       });
       return;
@@ -328,7 +329,7 @@ const UserProfile = () => {
       } catch (error) {
         console.error('Ошибка загрузки аватара:', error);
         toast({
-          title: language === 'ru' ? 'Ошибка загрузки аватара' : 'Аватар жүктеу қатесі',
+          title: t('avatar.upload.error'),
           description: (error as Error).message,
           variant: 'destructive'
         });
@@ -356,13 +357,13 @@ const UserProfile = () => {
       setIsEditingProfile(false);
       
       toast({
-        title: language === 'ru' ? 'Профиль сохранен' : 'Профиль сақталды',
-        description: language === 'ru' ? 'Ваши данные профиля успешно обновлены' : 'Сіздің профиль деректеріңіз сәтті жаңартылды',
+        title: t('profile.saved'),
+        description: t('profile.updated.successfully'),
       });
     } catch (error) {
       console.error('Ошибка сохранения профиля:', error);
       toast({
-        title: language === 'ru' ? 'Ошибка сохранения профиля' : 'Профильді сақтау қатесі',
+        title: t('profile.save.error'),
         description: (error as Error).message,
         variant: 'destructive'
       });
@@ -373,11 +374,12 @@ const UserProfile = () => {
   
   const handleLanguageChange = (lang: 'ru' | 'kz') => {
     if (language !== lang) {
+      setLanguage(lang);
       toast({
-        title: lang === 'ru' ? 'Язык изменен' : 'Тіл өзгертілді',
+        title: t('language.changed'),
         description: lang === 'ru' 
-          ? 'Язык интерфейса изменен на русский' 
-          : 'Интерфейс тілі қазақшаға өзгертілді',
+          ? t('language.changed.to.russian')
+          : t('language.changed.to.kazakh'),
       });
     }
   };
@@ -434,7 +436,7 @@ const UserProfile = () => {
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
             <p className="text-muted-foreground">
-              {language === 'ru' ? 'Загрузка профиля...' : 'Профильді жүктеу...'}
+              {t('loading.profile')}
             </p>
           </div>
         </main>
@@ -449,7 +451,7 @@ const UserProfile = () => {
       <main className="flex-1 container mx-auto px-4 py-8">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-2xl font-bold mb-6">
-            {language === 'ru' ? 'Личный кабинет' : 'Жеке кабинет'}
+            {t('personal.cabinet')}
           </h1>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -492,9 +494,7 @@ const UserProfile = () => {
                       )}
                     </div>
                     <h2 className="text-xl font-bold">
-                      {firstName || lastName ? `${firstName} ${lastName}` : (
-                        language === 'ru' ? 'Пользователь' : 'Пайдаланушы'
-                      )}
+                      {firstName || lastName ? `${firstName} ${lastName}` : t('user')}
                     </h2>
                     <p className="text-sm text-muted-foreground">{email}</p>
                     {phone && <p className="text-sm text-muted-foreground">{phone}</p>}
@@ -507,8 +507,8 @@ const UserProfile = () => {
                     onClick={() => setIsEditingProfile(!isEditingProfile)}
                   >
                     {isEditingProfile 
-                      ? (language === 'ru' ? 'Отменить' : 'Болдырмау')
-                      : (language === 'ru' ? 'Редактировать профиль' : 'Профильді өңдеу')
+                      ? t('cancel')
+                      : t('edit.profile')
                     }
                   </Button>
                 </CardFooter>
@@ -517,7 +517,7 @@ const UserProfile = () => {
               <Card>
                 <CardHeader>
                   <CardTitle>
-                    {language === 'ru' ? 'Язык интерфейса' : 'Интерфейс тілі'}
+                    {t('interface.language')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -527,14 +527,14 @@ const UserProfile = () => {
                       onClick={() => handleLanguageChange('ru')}
                       className="flex-1"
                     >
-                      Русский
+                      {t('russian')}
                     </Button>
                     <Button 
                       variant={language === 'kz' ? 'default' : 'outline'}
                       onClick={() => handleLanguageChange('kz')}
                       className="flex-1"
                     >
-                      Қазақша
+                      {t('kazakh')}
                     </Button>
                   </div>
                 </CardContent>
@@ -544,20 +544,20 @@ const UserProfile = () => {
               <Card>
                 <CardHeader>
                   <CardTitle>
-                    {language === 'ru' ? 'Статистика объявлений' : 'Хабарландырулар статистикасы'}
+                    {t('listings.statistics')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">
-                        {language === 'ru' ? 'Активные:' : 'Белсенді:'}
+                        {t('active')}:
                       </span>
                       <span className="font-medium">{userListings.length}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">
-                        {language === 'ru' ? 'Просмотры:' : 'Қаралымдар:'}
+                        {t('views')}:
                       </span>
                       <span className="font-medium">
                         {userListings.reduce((sum, listing) => sum + (listing.views || 0), 0)}
@@ -565,13 +565,13 @@ const UserProfile = () => {
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">
-                        {language === 'ru' ? 'В избранном:' : 'Таңдаулыларда:'}
+                        {t('in.favorites')}:
                       </span>
                       <span className="font-medium">{favoriteCount}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">
-                        {language === 'ru' ? 'Сообщения:' : 'Хабарламалар:'}
+                        {t('messages')}:
                       </span>
                       <span className="font-medium">{messages.length}</span>
                     </div>
@@ -587,13 +587,13 @@ const UserProfile = () => {
                   <Tabs value={activeTab} onValueChange={setActiveTab}>
                     <TabsList className="grid grid-cols-5">
                       <TabsTrigger value="profile">
-                        {language === 'ru' ? 'Профиль' : 'Профиль'}
+                        {t('profile')}
                       </TabsTrigger>
                       <TabsTrigger value="listings">
-                        {language === 'ru' ? 'Объявления' : 'Хабарландырулар'}
+                        {t('listings')}
                       </TabsTrigger>
                       <TabsTrigger value="messages">
-                        {language === 'ru' ? 'Сообщения' : 'Хабарламалар'}
+                        {t('messages')}
                         {getUnreadCount(messages) > 0 && (
                           <span className="ml-1.5 inline-flex items-center justify-center w-5 h-5 text-xs font-medium bg-primary text-white rounded-full">
                             {getUnreadCount(messages)}
@@ -601,10 +601,10 @@ const UserProfile = () => {
                         )}
                       </TabsTrigger>
                       <TabsTrigger value="reviews">
-                        {language === 'ru' ? 'Отзывы' : 'Пікірлер'}
+                        {t('reviews')}
                       </TabsTrigger>
                       <TabsTrigger value="notifications">
-                        {language === 'ru' ? 'Уведомления' : 'Хабарландырулар'}
+                        {t('notifications')}
                         {getUnreadCount(notifications) > 0 && (
                           <span className="ml-1.5 inline-flex items-center justify-center w-5 h-5 text-xs font-medium bg-primary text-white rounded-full">
                             {getUnreadCount(notifications)}
@@ -622,25 +622,25 @@ const UserProfile = () => {
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                               <Label htmlFor="firstName">
-                                {language === 'ru' ? 'Имя' : 'Аты'}
+                                {t('first.name')}
                               </Label>
                               <Input 
                                 id="firstName"
                                 value={firstName}
                                 onChange={(e) => setFirstName(e.target.value)}
-                                placeholder={language === 'ru' ? 'Введите имя' : 'Атыңызды енгізіңіз'}
+                                placeholder={t('enter.first.name')}
                                 disabled={isSaving}
                               />
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="lastName">
-                                {language === 'ru' ? 'Фамилия' : 'Тегі'}
+                                {t('last.name')}
                               </Label>
                               <Input 
                                 id="lastName"
                                 value={lastName}
                                 onChange={(e) => setLastName(e.target.value)}
-                                placeholder={language === 'ru' ? 'Введите фамилию' : 'Тегіңізді енгізіңіз'}
+                                placeholder={t('enter.last.name')}
                                 disabled={isSaving}
                               />
                             </div>
@@ -657,22 +657,19 @@ const UserProfile = () => {
                               className="bg-gray-100 cursor-not-allowed"
                             />
                             <p className="text-xs text-muted-foreground">
-                              {language === 'ru' 
-                                ? 'Email не может быть изменен через профиль' 
-                                : 'Email профиль арқылы өзгертілмейді'
-                              }
+                              {t('email.cannot.be.changed')}
                             </p>
                           </div>
                           
                           <div className="space-y-2">
                             <Label htmlFor="phone">
-                              {language === 'ru' ? 'Телефон' : 'Телефон'}
+                              {t('phone')}
                             </Label>
                             <Input 
                               id="phone"
                               value={phone}
                               onChange={(e) => setPhone(e.target.value)}
-                              placeholder={language === 'ru' ? 'Введите номер телефона' : 'Телефон нөміріңізді енгізіңіз'}
+                              placeholder={t('enter.phone')}
                               disabled={isSaving}
                             />
                           </div>
@@ -683,8 +680,8 @@ const UserProfile = () => {
                               disabled={isSaving}
                             >
                               {isSaving 
-                                ? (language === 'ru' ? 'Сохранение...' : 'Сақтау...') 
-                                : (language === 'ru' ? 'Сохранить изменения' : 'Өзгерістерді сақтау')
+                                ? t('saving')
+                                : t('save.changes')
                               }
                             </Button>
                             <Button 
@@ -692,7 +689,7 @@ const UserProfile = () => {
                               onClick={() => setIsEditingProfile(false)}
                               disabled={isSaving}
                             >
-                              {language === 'ru' ? 'Отменить' : 'Болдырмау'}
+                              {t('cancel')}
                             </Button>
                           </div>
                         </div>
@@ -701,15 +698,15 @@ const UserProfile = () => {
                           <div className="grid grid-cols-2 gap-4">
                             <div>
                               <div className="font-medium text-sm text-muted-foreground mb-1">
-                                {language === 'ru' ? 'Имя' : 'Аты'}
+                                {t('first.name')}
                               </div>
-                              <div>{firstName || (language === 'ru' ? 'Не указано' : 'Көрсетілмеген')}</div>
+                              <div>{firstName || t('not.specified')}</div>
                             </div>
                             <div>
                               <div className="font-medium text-sm text-muted-foreground mb-1">
-                                {language === 'ru' ? 'Фамилия' : 'Тегі'}
+                                {t('last.name')}
                               </div>
-                              <div>{lastName || (language === 'ru' ? 'Не указано' : 'Көрсетілмеген')}</div>
+                              <div>{lastName || t('not.specified')}</div>
                             </div>
                           </div>
                           
@@ -722,9 +719,9 @@ const UserProfile = () => {
                           
                           <div>
                             <div className="font-medium text-sm text-muted-foreground mb-1">
-                              {language === 'ru' ? 'Телефон' : 'Телефон'}
+                              {t('phone')}
                             </div>
-                            <div>{phone || (language === 'ru' ? 'Не указано' : 'Көрсетілмеген')}</div>
+                            <div>{phone || t('not.specified')}</div>
                           </div>
                         </div>
                       )}
