@@ -26,9 +26,9 @@ export const MyListings: React.FC<MyListingsProps> = ({ listings }) => {
 
   const getListingUrl = (listing: ExtendedListing) => {
     const title = typeof listing.title === 'string' ? listing.title : listing.title[language];
-    // Используем categoryId напрямую, если он уже строка, или преобразуем из числа
-    const categorySlug = typeof listing.categoryId === 'string' ? listing.categoryId : listing.categoryId?.toString() || '';
-    return createListingUrl(categorySlug, title);
+    // Ensure categoryId is treated as string or number, with fallback
+    const categoryId = listing.categoryId || '1';
+    return createListingUrl(categoryId, title);
   };
 
   return (
