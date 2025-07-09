@@ -17,7 +17,7 @@ interface MyListingsProps {
 }
 
 export const MyListings: React.FC<MyListingsProps> = ({ listings }) => {
-  const { t } = useTranslation();
+  const { t, currentLang } = useTranslation();
 
   const formatPrice = (price: number) => {
     if (price === 0) return t('free');
@@ -25,7 +25,7 @@ export const MyListings: React.FC<MyListingsProps> = ({ listings }) => {
   };
 
   const getListingUrl = (listing: ExtendedListing) => {
-    const title = typeof listing.title === 'string' ? listing.title : listing.title[t.currentLang];
+    const title = typeof listing.title === 'string' ? listing.title : listing.title[currentLang];
     // Ensure categoryId is treated as string or number, with fallback
     const categoryId = listing.categoryId || '1';
     return createListingUrl(categoryId, title);
@@ -41,13 +41,13 @@ export const MyListings: React.FC<MyListingsProps> = ({ listings }) => {
                 <div className="w-24 h-24">
                   <img 
                     src={listing.imageUrl || '/placeholder.svg'} 
-                    alt={typeof listing.title === 'string' ? listing.title : listing.title[t.currentLang]} 
+                    alt={typeof listing.title === 'string' ? listing.title : listing.title[currentLang]} 
                     className="w-full h-full object-cover rounded-l-lg"
                   />
                 </div>
                 <CardContent className="flex-1 p-3">
                   <h3 className="font-medium text-sm line-clamp-2 mb-1">
-                    {typeof listing.title === 'string' ? listing.title : listing.title[t.currentLang]}
+                    {typeof listing.title === 'string' ? listing.title : listing.title[currentLang]}
                   </h3>
                   <p className="text-sm font-semibold text-primary mb-2">
                     {formatPrice(listing.discountPrice || listing.price)}
@@ -67,7 +67,7 @@ export const MyListings: React.FC<MyListingsProps> = ({ listings }) => {
                   
                   <div className="flex justify-between items-center">
                     <span className="text-xs text-muted-foreground">
-                      {new Date(listing.createdAt).toLocaleDateString(t.currentLang === 'ru' ? 'ru-RU' : 'kk-KZ')}
+                      {new Date(listing.createdAt).toLocaleDateString(currentLang === 'ru' ? 'ru-RU' : 'kk-KZ')}
                     </span>
                     <Button variant="outline" size="sm" asChild>
                       <Link to={getListingUrl(listing)}>
