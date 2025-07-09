@@ -12,6 +12,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { processImageForUpload } from '@/utils/imageUtils';
 import { useNavigate } from 'react-router-dom';
 import { useListings } from '@/hooks/useListings';
+import { useFavorites } from '@/hooks/useFavorites';
 
 // Import profile components
 import { MyListings } from '@/components/profile/MyListings';
@@ -26,6 +27,7 @@ const UserProfile = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('profile');
   const { getUserListings } = useListings();
+  const { getFavorites } = useFavorites();
   
   // Combined loading state
   const [isInitializing, setIsInitializing] = useState(true);
@@ -43,10 +45,11 @@ const UserProfile = () => {
   
   // Real data from Supabase
   const [userListings, setUserListings] = useState<any[]>([]);
+  const [favoriteCount, setFavoriteCount] = useState(0);
   const [messages, setMessages] = useState<any[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
-  
+
   // Authentication and profile data loading
   useEffect(() => {
     const initializeProfile = async () => {
@@ -120,28 +123,42 @@ const UserProfile = () => {
       const listings = await getUserListings();
       console.log('📋 Загруженные объявления пользователя:', listings);
       
-      // Transform Supabase data to match expected format
-      const transformedListings = listings.map(listing => ({
-        id: listing.id,
-        title: listing.title,
-        description: listing.description || '',
-        price: listing.regular_price || 0,
-        originalPrice: listing.regular_price || 0,
-        discountPrice: listing.discount_price || listing.regular_price || 0,
-        discount: listing.discount_percent || 0,
-        city: listing.city_id?.toString() || '',
-        categoryId: listing.category_id?.toString() || '',
-        createdAt: listing.created_at,
-        imageUrl: listing.images?.[0] || '/placeholder.svg',
-        views: listing.views || 0,
-        isFeatured: listing.is_premium || false,
-        userId: listing.user_id,
-        regionId: listing.region_id?.toString() || '',
-        cityId: listing.city_id?.toString() || '',
-        microdistrictId: listing.microdistrict_id?.toString() || ''
-      }));
+      // Get favorites count for each listing
+      const listingsWithFavorites = await Promise.all(
+        listings.map(async (listing) => {
+          const { data: favoritesData } = await supabase
+            .from('favorites')
+            .select('id')
+            .eq('listing_id', listing.id);
+          
+          return {
+            id: listing.id,
+            title: listing.title,
+            description: listing.description || '',
+            price: listing.regular_price || 0,
+            originalPrice: listing.regular_price || 0,
+            discountPrice: listing.discount_price || listing.regular_price || 0,
+            discount: listing.discount_percent || 0,
+            city: listing.city_id?.toString() || '',
+            categoryId: listing.category_id?.toString() || '',
+            createdAt: listing.created_at,
+            imageUrl: listing.images?.[0] || '/placeholder.svg',
+            views: listing.views || 0,
+            favoriteCount: favoritesData?.length || 0,
+            isFeatured: listing.is_premium || false,
+            userId: listing.user_id,
+            regionId: listing.region_id?.toString() || '',
+            cityId: listing.city_id?.toString() || '',
+            microdistrictId: listing.microdistrict_id?.toString() || ''
+          };
+        })
+      );
       
-      setUserListings(transformedListings);
+      setUserListings(listingsWithFavorites);
+      
+      // Calculate total favorites
+      const totalFavorites = listingsWithFavorites.reduce((sum, listing) => sum + listing.favoriteCount, 0);
+      setFavoriteCount(totalFavorites);
     } catch (error) {
       console.error('Ошибка загрузки объявлений пользователя:', error);
       setUserListings([]);
@@ -241,20 +258,29 @@ const UserProfile = () => {
       setNotifications([]);
     }
   };
-  
+
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       
-      const processedFile = await processImageForUpload(file);
-      const previewUrl = URL.createObjectURL(processedFile);
-      setAvatarUrl(previewUrl);
-      setNewAvatarFile(processedFile);
-      
-      toast({
-        title: language === 'ru' ? 'Фото загружено' : 'Фото жүктелді',
-        description: language === 'ru' ? 'Фото профиля обновлено' : 'Профиль фотосы жаңартылды',
-      });
+      try {
+        const processedFile = await processImageForUpload(file);
+        const previewUrl = URL.createObjectURL(processedFile);
+        setAvatarUrl(previewUrl);
+        setNewAvatarFile(processedFile);
+        
+        toast({
+          title: language === 'ru' ? 'Фото загружено' : 'Фото жүктелді',
+          description: language === 'ru' ? 'Фото профиля обновлено' : 'Профиль фотосы жаңартылды',
+        });
+      } catch (error) {
+        console.error('Ошибка обработки изображения:', error);
+        toast({
+          title: language === 'ru' ? 'Ошибка' : 'Қате',
+          description: language === 'ru' ? 'Не удалось обработать изображение' : 'Суретті өңдеу мүмкін болмады',
+          variant: 'destructive'
+        });
+      }
     }
   };
   
@@ -534,6 +560,12 @@ const UserProfile = () => {
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">
+                        {language === 'ru' ? 'В избранном:' : 'Таңдаулыларда:'}
+                      </span>
+                      <span className="font-medium">{favoriteCount}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">
                         {language === 'ru' ? 'Сообщения:' : 'Хабарламалар:'}
                       </span>
                       <span className="font-medium">{messages.length}</span>
@@ -591,6 +623,7 @@ const UserProfile = () => {
                                 id="firstName"
                                 value={firstName}
                                 onChange={(e) => setFirstName(e.target.value)}
+                                placeholder={language === 'ru' ? 'Введите имя' : 'Атыңызды енгізіңіз'}
                               />
                             </div>
                             <div className="space-y-2">
@@ -601,6 +634,7 @@ const UserProfile = () => {
                                 id="lastName"
                                 value={lastName}
                                 onChange={(e) => setLastName(e.target.value)}
+                                placeholder={language === 'ru' ? 'Введите фамилию' : 'Тегіңізді енгізіңіз'}
                               />
                             </div>
                           </div>
@@ -631,6 +665,7 @@ const UserProfile = () => {
                               id="phone"
                               value={phone}
                               onChange={(e) => setPhone(e.target.value)}
+                              placeholder={language === 'ru' ? 'Введите номер телефона' : 'Телефон нөміріңізді енгізіңіз'}
                             />
                           </div>
                           

@@ -5,11 +5,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Listing } from '@/types/listingType';
 import { useAppContext } from '@/contexts/AppContext';
-import { User } from 'lucide-react';
+import { User, Eye, Heart } from 'lucide-react';
 import { createListingUrl } from '@/utils/urlUtils';
 
+interface ExtendedListing extends Omit<Listing, 'favoriteCount'> {
+  favoriteCount?: number;
+}
+
 interface MyListingsProps {
-  listings: Listing[];
+  listings: ExtendedListing[];
 }
 
 export const MyListings: React.FC<MyListingsProps> = ({ listings }) => {
@@ -20,9 +24,11 @@ export const MyListings: React.FC<MyListingsProps> = ({ listings }) => {
     return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") + ' ₸';
   };
 
-  const getListingUrl = (listing: Listing) => {
+  const getListingUrl = (listing: ExtendedListing) => {
     const title = typeof listing.title === 'string' ? listing.title : listing.title[language];
-    return createListingUrl(listing.categoryId, title);
+    // Используем categoryId напрямую, если он уже строка, или преобразуем из числа
+    const categorySlug = typeof listing.categoryId === 'string' ? listing.categoryId : listing.categoryId?.toString() || '';
+    return createListingUrl(categorySlug, title);
   };
 
   return (
@@ -46,9 +52,22 @@ export const MyListings: React.FC<MyListingsProps> = ({ listings }) => {
                   <p className="text-sm font-semibold text-primary mb-2">
                     {formatPrice(listing.discountPrice || listing.price)}
                   </p>
+                  
+                  {/* Статистика объявления */}
+                  <div className="flex items-center gap-3 mb-2 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <Eye className="h-3 w-3" />
+                      <span>{listing.views || 0}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Heart className="h-3 w-3" />
+                      <span>{listing.favoriteCount || 0}</span>
+                    </div>
+                  </div>
+                  
                   <div className="flex justify-between items-center">
                     <span className="text-xs text-muted-foreground">
-                      {language === 'ru' ? 'Просмотров:' : 'Қаралымдар:'} {listing.views}
+                      {new Date(listing.createdAt).toLocaleDateString(language === 'ru' ? 'ru-RU' : 'kk-KZ')}
                     </span>
                     <Button variant="outline" size="sm" asChild>
                       <Link to={getListingUrl(listing)}>
