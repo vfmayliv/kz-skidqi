@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import { Header } from '@/components/Header';
@@ -64,10 +65,73 @@ export default function ListingDetail() {
         console.log('🔍 Поиск по SEO URL:', { categorySlug, titleSlug });
         
         try {
-          const categoryId = getCategoryIdBySlug(categorySlug);
-          console.log('📁 Поиск в Supabase по категории:', { categorySlug, categoryId });
+          // Сначала попробуем найти по категории slug
+          let categoryId = getCategoryIdBySlug(categorySlug);
+          
+          // Если не нашли точное соответствие, попробуем найти в базе по всем активным объявлениям
+          if (!categoryId) {
+            console.log('📁 Категория не найдена в маппинге, ищем по всем объявлениям');
+            const { data: allListings, error } = await supabase
+              .from('listings')
+              .select(`
+                *,
+                cities(name_ru, name_kz),
+                categories(name_ru, name_kz)
+              `)
+              .eq('status', 'active');
 
-          if (categoryId) {
+            if (!error && allListings) {
+              console.log('📋 Найдено объявлений для поиска:', allListings.length);
+              
+              // Ищем объявление по совпадению slug заголовка
+              for (const listingItem of allListings) {
+                const listingTitleSlug = transliterate(listingItem.title || '');
+                console.log('🔎 Сравниваем slugs:', { 
+                  generated: listingTitleSlug, 
+                  target: titleSlug,
+                  title: listingItem.title,
+                  match: listingTitleSlug === titleSlug
+                });
+                
+                if (listingTitleSlug === titleSlug) {
+                  targetListing = {
+                    id: listingItem.id,
+                    userId: listingItem.user_id,
+                    title: listingItem.title,
+                    description: listingItem.description || '',
+                    price: listingItem.regular_price || 0,
+                    originalPrice: listingItem.regular_price || 0,
+                    discountPrice: listingItem.discount_price || listingItem.regular_price || 0,
+                    discount: listingItem.discount_percent || 0,
+                    city: listingItem.cities?.name_ru || '',
+                    categoryId: listingItem.category_id?.toString() || '4',
+                    createdAt: listingItem.created_at,
+                    imageUrl: listingItem.images?.[0] || '/placeholder.svg',
+                    images: listingItem.images || ['/placeholder.svg'],
+                    isFeatured: listingItem.is_premium || false,
+                    views: listingItem.views || 0,
+                    regionId: listingItem.region_id?.toString() || '',
+                    cityId: listingItem.city_id?.toString() || '',
+                    microdistrictId: listingItem.microdistrict_id?.toString() || '',
+                    seller: {
+                      name: 'Skidqi',
+                      phone: listingItem.phone || '+7 777 123 45 67',
+                      rating: 4.9,
+                      reviews: 156,
+                      memberSince: '2022',
+                      response: language === 'ru' ? 'Отвечает обычно в течении часа' : 'Әдетте бір сағат ішінде жауап береді',
+                      lastOnline: language === 'ru' ? 'Был онлайн сегодня' : 'Бүгін онлайн болды'
+                    },
+                    coordinates: undefined
+                  };
+                  
+                  console.log('✅ Найдено объявление:', targetListing);
+                  break;
+                }
+              }
+            }
+          } else {
+            // Стандартный поиск по categoryId
             const { data: listings, error } = await supabase
               .from('listings')
               .select(`
@@ -78,15 +142,13 @@ export default function ListingDetail() {
               .eq('category_id', categoryId)
               .eq('status', 'active');
 
-            if (error) {
-              console.error('❌ Ошибка при поиске в Supabase:', error);
-            } else if (listings && listings.length > 0) {
-              console.log('📋 Найдено объявлений в Supabase:', listings.length);
+            if (!error && listings && listings.length > 0) {
+              console.log('📋 Найдено объявлений в категории:', listings.length);
               
               // Ищем объявление по совпадению slug
               for (const listingItem of listings) {
                 const listingTitleSlug = transliterate(listingItem.title || '');
-                console.log('🔎 Сравниваем slugs в Supabase:', { 
+                console.log('🔎 Сравниваем slugs в категории:', { 
                   generated: listingTitleSlug, 
                   target: titleSlug,
                   title: listingItem.title,
@@ -125,16 +187,14 @@ export default function ListingDetail() {
                     coordinates: undefined
                   };
                   
-                  console.log('✅ Найдено объявление в Supabase:', targetListing);
+                  console.log('✅ Найдено объявление в категории:', targetListing);
                   break;
                 }
               }
-            } else {
-              console.log('❌ Не удалось получить categoryId для:', categorySlug);
             }
           }
         } catch (error) {
-          console.error('❌ Ошибка при поиске объявления в Supabase:', error);
+          console.error('❌ Ошибка при поиске объявления:', error);
         }
       } 
       // Если есть старый формат URL с ID

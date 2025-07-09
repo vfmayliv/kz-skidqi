@@ -31,6 +31,7 @@ const UserProfile = () => {
   
   // Combined loading state
   const [isInitializing, setIsInitializing] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   
   // User profile state
   const [firstName, setFirstName] = useState('');
@@ -303,6 +304,7 @@ const UserProfile = () => {
       return;
     }
 
+    setIsSaving(true);
     let processedAvatarUrl = avatarUrl;
 
     if (newAvatarFile) {
@@ -330,6 +332,7 @@ const UserProfile = () => {
           description: (error as Error).message,
           variant: 'destructive'
         });
+        setIsSaving(false);
         return;
       }
     }
@@ -363,6 +366,8 @@ const UserProfile = () => {
         description: (error as Error).message,
         variant: 'destructive'
       });
+    } finally {
+      setIsSaving(false);
     }
   };
   
@@ -624,6 +629,7 @@ const UserProfile = () => {
                                 value={firstName}
                                 onChange={(e) => setFirstName(e.target.value)}
                                 placeholder={language === 'ru' ? 'Введите имя' : 'Атыңызды енгізіңіз'}
+                                disabled={isSaving}
                               />
                             </div>
                             <div className="space-y-2">
@@ -635,6 +641,7 @@ const UserProfile = () => {
                                 value={lastName}
                                 onChange={(e) => setLastName(e.target.value)}
                                 placeholder={language === 'ru' ? 'Введите фамилию' : 'Тегіңізді енгізіңіз'}
+                                disabled={isSaving}
                               />
                             </div>
                           </div>
@@ -666,12 +673,28 @@ const UserProfile = () => {
                               value={phone}
                               onChange={(e) => setPhone(e.target.value)}
                               placeholder={language === 'ru' ? 'Введите номер телефона' : 'Телефон нөміріңізді енгізіңіз'}
+                              disabled={isSaving}
                             />
                           </div>
                           
-                          <Button onClick={handleProfileSave}>
-                            {language === 'ru' ? 'Сохранить изменения' : 'Өзгерістерді сақтау'}
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button 
+                              onClick={handleProfileSave}
+                              disabled={isSaving}
+                            >
+                              {isSaving 
+                                ? (language === 'ru' ? 'Сохранение...' : 'Сақтау...') 
+                                : (language === 'ru' ? 'Сохранить изменения' : 'Өзгерістерді сақтау')
+                              }
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              onClick={() => setIsEditingProfile(false)}
+                              disabled={isSaving}
+                            >
+                              {language === 'ru' ? 'Отменить' : 'Болдырмау'}
+                            </Button>
+                          </div>
                         </div>
                       ) : (
                         <div className="space-y-4">

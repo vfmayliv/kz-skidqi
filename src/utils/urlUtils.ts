@@ -1,3 +1,4 @@
+
 import { transliterate as tr, slugify } from 'transliteration';
 
 export const transliterate = (text: string): string => {
@@ -46,7 +47,11 @@ const categoryIdToSlugMap: { [key: string]: string } = {
   '26': 'land',
   '27': 'rent-apartments',
   '28': 'rent-houses',
-  '29': 'rent-commercial'
+  '29': 'rent-commercial',
+  
+  // Добавляем маппинг для проблемных ID
+  '2588': 'fashion-shoes',
+  '2638': 'fashion-accessories'
 };
 
 // Обратный маппинг slug на ID категории  
@@ -58,7 +63,7 @@ Object.entries(categoryIdToSlugMap).forEach(([id, slug]) => {
 // Функция для получения slug категории по ID
 export const getCategorySlugById = (categoryId: string | number): string => {
   const id = typeof categoryId === 'number' ? categoryId.toString() : categoryId;
-  return categoryIdToSlugMap[id] || id; // Возвращаем сам ID как fallback
+  return categoryIdToSlugMap[id] || 'fashion'; // Используем 'fashion' как fallback для неизвестных ID
 };
 
 // Функция для получения ID категории по slug
