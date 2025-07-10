@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
-import { useAppContext } from '@/contexts/AppContext';
+import { useTranslation } from '@/hooks/use-translation';
 import { Bell } from 'lucide-react';
 
 interface Notification {
@@ -21,7 +21,7 @@ interface NotificationsListProps {
 export const NotificationsList: React.FC<NotificationsListProps> = ({ 
   notifications, formatDate, onMarkAsRead 
 }) => {
-  const { language } = useAppContext();
+  const { t } = useTranslation();
   
   return (
     <div className="space-y-4">
@@ -49,7 +49,7 @@ export const NotificationsList: React.FC<NotificationsListProps> = ({
         <div className="text-center py-8">
           <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <p className="text-muted-foreground">
-            {language === 'ru' ? 'У вас пока нет уведомлений' : 'Сізде әзірше хабарландырулар жоқ'}
+            {t('no.notifications')}
           </p>
         </div>
       )}

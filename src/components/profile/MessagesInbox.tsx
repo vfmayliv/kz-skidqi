@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardHeader, CardContent, CardFooter, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useAppContext } from '@/contexts/AppContext';
+import { useTranslation } from '@/hooks/use-translation';
 import { MessageSquare } from 'lucide-react';
 
 interface Message {
@@ -19,7 +19,7 @@ interface MessagesInboxProps {
 }
 
 export const MessagesInbox: React.FC<MessagesInboxProps> = ({ messages, formatDate }) => {
-  const { language } = useAppContext();
+  const { t } = useTranslation();
   
   return (
     <div className="space-y-4">
@@ -38,7 +38,7 @@ export const MessagesInbox: React.FC<MessagesInboxProps> = ({ messages, formatDa
               </CardContent>
               <CardFooter className="pt-0 pb-3 flex justify-end">
                 <Button variant="outline" size="sm">
-                  {language === 'ru' ? 'Ответить' : 'Жауап беру'}
+                  {t('reply')}
                 </Button>
               </CardFooter>
             </Card>
@@ -48,7 +48,7 @@ export const MessagesInbox: React.FC<MessagesInboxProps> = ({ messages, formatDa
         <div className="text-center py-8">
           <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <p className="text-muted-foreground">
-            {language === 'ru' ? 'У вас пока нет сообщений' : 'Сізде әзірше хабарламалар жоқ'}
+            {t('no.messages')}
           </p>
         </div>
       )}

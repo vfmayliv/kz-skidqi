@@ -190,5 +190,8 @@
   "language.changed": "Тіл өзгертілді",
   "language.changed.to.russian": "Интерфейс тілі орысшаға өзгертілді",
   "language.changed.to.kazakh": "Интерфейс тілі қазақшаға өзгертілді",
-  "error": "Қате"
+  "error": "Қате",
+  "reply": "Жауап беру",
+  "no.messages": "Сізде әзірше хабарламалар жоқ",
+  "no.notifications": "Сізде әзірше хабарландырулар жоқ"
 }
