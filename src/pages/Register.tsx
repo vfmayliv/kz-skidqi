@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Link, useNavigate } from 'react-router-dom';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/components/ui/use-toast';
+import { Helmet } from "react-helmet-async";
 
 const Register = () => {
   const { language, t } = useAppContext();
@@ -145,6 +146,10 @@ const Register = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <Helmet>
+        <title>{language === 'ru' ? 'Регистрация' : 'Тіркелу'} | SKIDQI.COM</title>
+        <meta name="description" content={language === 'ru' ? 'Зарегистрируйтесь на SKIDQI.COM' : 'SKIDQI.COM сайтына тіркеліңіз'} />
+      </Helmet>
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8 flex items-center justify-center">
         <Card className="w-full max-w-md">
