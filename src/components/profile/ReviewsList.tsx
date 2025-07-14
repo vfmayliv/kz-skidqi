@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
-import { useAppContext } from '@/contexts/AppContext';
+import { useTranslation } from '@/hooks/use-translation';
 import { User } from 'lucide-react';
 
 interface Review {
@@ -18,7 +18,7 @@ interface ReviewsListProps {
 }
 
 export const ReviewsList: React.FC<ReviewsListProps> = ({ reviews, formatDate }) => {
-  const { language } = useAppContext();
+  const { t, currentLang } = useTranslation();
   
   return (
     <div className="space-y-4">
@@ -56,7 +56,7 @@ export const ReviewsList: React.FC<ReviewsListProps> = ({ reviews, formatDate })
         <div className="text-center py-8">
           <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <p className="text-muted-foreground">
-            {language === 'ru' ? 'У вас пока нет отзывов' : 'Сізде әзірше пікірлер жоқ'}
+            {t('no.reviews')}
           </p>
         </div>
       )}
