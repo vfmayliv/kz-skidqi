@@ -23,7 +23,7 @@ import { ReviewsList } from '@/components/profile/ReviewsList';
 import { NotificationsList } from '@/components/profile/NotificationsList';
 
 const UserProfile = () => {
-  const { t } = useTranslation();
+  const { t, currentLang } = useTranslation();
   const { language, setLanguage } = useAppStore();
   const { user: authUser, supabase, loading: authLoading } = useSupabase();
   const { toast } = useToast();
