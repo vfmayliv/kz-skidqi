@@ -21,21 +21,6 @@ export const ListingDescription = ({ description }: ListingDescriptionProps) => 
             {description}
           </p>
           
-          {/* Additional description content for better resemblance to Avito */}
-          <p className="text-sm">
-            {t('guaranteeMessage', 'Товар в наличии. Гарантия качества. Возможен торг при осмотре.')}
-          </p>
-          
-          <div className="pt-4">
-            <h4 className="text-sm font-medium mb-2">
-              {t('advantages', 'Преимущества товара:')}
-            </h4>
-            <ul className="list-disc pl-5 text-sm space-y-1">
-              <li>{t('highQuality', 'Высокое качество')}</li>
-              <li>{t('longLifespan', 'Долгий срок службы')}</li>
-              <li>{t('reliableManufacturer', 'Надежный производитель')}</li>
-            </ul>
-          </div>
         </div>
       </div>
     </div>
