@@ -328,7 +328,7 @@ const UserProfile = () => {
 
     if (newAvatarFile) {
       try {
-        const filePath = `avatars/${authUser.id}/${Date.now()}_${
+        const filePath = `${authUser.id}/${Date.now()}_${
           newAvatarFile.name
         }`;
 
