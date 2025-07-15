@@ -63,51 +63,52 @@ const UserProfile = () => {
 
       if (!authUser) {
         toast({
-          title: t('access.denied'),
-          description: t('please.login'),
-          variant: 'destructive'
+          title: t("access.denied"),
+          description: t("please.login"),
+          variant: "destructive",
         });
-        navigate('/login');
+        navigate("/login");
         return;
       }
 
-      setEmail(authUser.email || '');
-      
+      setEmail(authUser.email || "");
+
       try {
         // Load profile data
         const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('first_name, last_name, phone, avatar_url')
-          .eq('id', authUser.id)
+          .from("profiles")
+          .select("first_name, last_name, phone, avatar_url")
+          .eq("id", authUser.id)
           .single();
 
-        if (profileError && profileError.code !== 'PGRST116') {
-          console.error('Ошибка загрузки профиля:', profileError);
+        if (profileError && profileError.code !== "PGRST116") {
+          console.error("Ошибка загрузки профиля:", profileError);
         } else if (profileData) {
-          setFirstName(profileData.first_name || '');
-          setLastName(profileData.last_name || '');
-          setPhone(profileData.phone || '');
-          setAvatarUrl(profileData.avatar_url || null);
+          if (!isEditingProfile) {
+            setFirstName(profileData.first_name || "");
+            setLastName(profileData.last_name || "");
+            setPhone(profileData.phone || "");
+            setAvatarUrl(profileData.avatar_url || null);
+          }
         }
 
         // Load real user listings from Supabase
         await loadUserListings();
-        
+
         // Load real messages from Supabase
         await loadUserMessages();
-        
+
         // Load real notifications from Supabase
         await loadUserNotifications();
-        
+
         // Load real reviews from Supabase (placeholder for now)
         setReviews([]);
-        
       } catch (e) {
-        console.error('Исключение при загрузке профиля:', e);
+        console.error("Исключение при загрузке профиля:", e);
         toast({
-          title: t('profile.load.error'),
+          title: t("profile.load.error"),
           description: (e as Error).message,
-          variant: 'destructive'
+          variant: "destructive",
         });
       }
 
@@ -115,8 +116,8 @@ const UserProfile = () => {
     };
 
     initializeProfile();
-  }, [authUser, authLoading, supabase, t, toast, navigate]);
-
+  }, [authUser, authLoading, supabase, isEditingProfile, t, toast, navigate]);
+  
   // Load user's real listings from Supabase
   const loadUserListings = async () => {
     if (!authUser) return;
