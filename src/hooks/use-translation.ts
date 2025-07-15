@@ -1,4 +1,3 @@
-
 import { useAppStore } from '@/stores/useAppStore';
 import ruTranslation from '@/i18n/locales/ru.json';
 import kzTranslation from '@/i18n/locales/kz.json';
@@ -21,7 +20,12 @@ export const useTranslation = () => {
       // Для простых строк, ищем перевод в файлах локализации
       const translation = translations[language as keyof typeof translations];
       
-      // Обработка вложенных ключей с точками
+      // Сначала проверяем, существует ли такой ключ напрямую
+      if (translation && key in translation) {
+        return translation[key as keyof typeof translation];
+      }
+      
+      // Если прямого ключа нет, пробуем обработать как вложенную структуру
       const keys = key.split('.');
       let result: any = translation;
       
