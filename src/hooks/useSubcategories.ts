@@ -34,12 +34,17 @@ export function useSubcategories(parentId: string | null) {
           throw new Error(error.message);
         }
 
-        // Преобразуем UUID в number для совместимости
-        const transformedData = data?.map(item => ({
-          ...item,
-          id: parseInt(item.id.replace(/-/g, '').substring(0, 8), 16), // Преобразуем UUID в число
-          parent_id: item.parent_id ? parseInt(item.parent_id.replace(/-/g, '').substring(0, 8), 16) : null
-        })) || [];
+        // Преобразуем данные к формату Category
+        const transformedData: Category[] = (data || []).map(item => ({
+          id: item.id, // Оставляем как UUID string
+          name_ru: item.name_ru,
+          name_kz: item.name_kz,
+          slug: item.slug,
+          parent_id: item.parent_id,
+          level: item.level,
+          is_active: true,
+          sort_order: 0
+        }));
 
         setCategories(transformedData);
       } catch (err: any) {

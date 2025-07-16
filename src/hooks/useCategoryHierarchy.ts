@@ -13,9 +13,9 @@ export function useCategoryHierarchy() {
         console.log('🔄 Fetching categories from Supabase...');
         
         const { data, error } = await supabase
-          .from('categories')
+          .from('listing_categories')
           .select('*')
-          .order('sort_order', { ascending: true });
+          .order('level', { ascending: true });
 
         if (error) {
           console.error('❌ Error fetching categories:', error);

@@ -173,7 +173,7 @@ const CreateListing = () => {
         description: formData.description,
         regular_price: formData.regular_price || 0,
         discount_price: formData.discount_price || 0,
-        category_id: formData.categoryId, // Теперь это UUID строка
+        category_id: formData.categoryId, // This is now a string UUID
         user_id: user.id,
         city_id: formData.cityId ? parseInt(formData.cityId) : undefined,
         region_id: formData.regionId ? parseInt(formData.regionId) : undefined,
@@ -233,7 +233,7 @@ const CreateListing = () => {
         description: formData.description || "",
         regular_price: formData.regular_price || 0,
         discount_price: formData.discount_price || 0,
-        category_id: formData.categoryId || null, // UUID строка или null
+        category_id: formData.categoryId, // This is now a string UUID
         user_id: user.id,
         city_id: formData.cityId ? parseInt(formData.cityId) : undefined,
         region_id: formData.regionId ? parseInt(formData.regionId) : undefined,
