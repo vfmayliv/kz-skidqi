@@ -27,7 +27,7 @@ import {
   uploadImagestoSupabase,
   saveListingToSupabase,
 } from "@/utils/listingUtils";
-import { CategorySelector } from "@/components/create-listing/CategorySelector";
+import CategorySelector from "@/components/create-listing/CategorySelector";
 import { CategoryFilters } from "@/components/create-listing/CategoryFilters";
 
 // Define a form data interface that matches our form structure
@@ -114,10 +114,10 @@ const CreateListing = () => {
   };
 
   // Обновленная функция обработки выбора категории
-  const handleCategoryChange = (categoryId: string) => {
+  const handleCategoryChange = (categoryId: number) => {
     setFormData((prev) => ({ 
       ...prev, 
-      categoryId: categoryId || null 
+      categoryId: categoryId.toString()
     }));
   };
 
@@ -283,10 +283,10 @@ const CreateListing = () => {
               <CardContent className="p-6">
                 <h2 className="text-2xl font-bold mb-4">Создание объявления</h2>
 
-                {/* Category Selection - Обновленный компонент */}
+                {/* Category Selection - Updated to pass number instead of string */}
                 <CategorySelector
-                  selectedCategoryId={formData.categoryId}
-                  onCategoryChange={handleCategoryChange}
+                  selectedCategoryId={formData.categoryId ? parseInt(formData.categoryId) : undefined}
+                  onCategorySelect={handleCategoryChange}
                 />
 
                 {/* Title */}
