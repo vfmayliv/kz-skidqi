@@ -1,3 +1,4 @@
+
 import { supabase as supabaseClient } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -7,8 +8,8 @@ export const supabase = supabaseClient;
 // Проверка связи с базой данных при запуске (опционально)
 (async () => {
   try {
-    // Попытка получить 1 запись из таблицы 'categories' - проверка связи
-    const { error } = await supabase.from('categories').select('*').limit(1);
+    // Попытка получить 1 запись из таблицы 'listing_categories' - проверка связи
+    const { error } = await supabase.from('listing_categories').select('*').limit(1);
     if (error) {
       console.error('Ошибка подключения к Supabase:', error);
     } else {

@@ -8,8 +8,8 @@ import { useCategorySteps } from '@/hooks/useCategorySteps';
 import { useTranslation } from '@/hooks/use-translation';
 
 interface CategorySelectorProps {
-  onCategorySelect: (categoryId: number) => void;
-  selectedCategoryId?: number;
+  onCategorySelect: (categoryId: string) => void;
+  selectedCategoryId?: string;
 }
 
 const CategorySelector: React.FC<CategorySelectorProps> = ({ 

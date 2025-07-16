@@ -436,7 +436,7 @@ export type Database = {
           },
         ]
       }
-      categories: {
+      categories_old: {
         Row: {
           icon: string | null
           id: number
@@ -475,7 +475,7 @@ export type Database = {
             foreignKeyName: "categories_parent_id_fkey"
             columns: ["parent_id"]
             isOneToOne: false
-            referencedRelation: "categories"
+            referencedRelation: "categories_old"
             referencedColumns: ["id"]
           },
         ]
@@ -1110,6 +1110,50 @@ export type Database = {
           },
         ]
       }
+      listing_categories: {
+        Row: {
+          created_at: string | null
+          id: string
+          level: number
+          name_kz: string
+          name_ru: string
+          parent_id: string | null
+          parent_name_ru: string | null
+          slug: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          level: number
+          name_kz: string
+          name_ru: string
+          parent_id?: string | null
+          parent_name_ru?: string | null
+          slug: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          level?: number
+          name_kz?: string
+          name_ru?: string
+          parent_id?: string | null
+          parent_name_ru?: string | null
+          slug?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "listing_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       listings: {
         Row: {
           address: string | null
@@ -1266,7 +1310,7 @@ export type Database = {
             foreignKeyName: "listings_category_id_fkey"
             columns: ["category_id"]
             isOneToOne: false
-            referencedRelation: "categories"
+            referencedRelation: "categories_old"
             referencedColumns: ["id"]
           },
           {

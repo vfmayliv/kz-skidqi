@@ -1,10 +1,11 @@
+
 export interface Category {
-  id: number;
+  id: string;
   name_ru: string;
   name_kz: string;
   icon?: string;
   slug: string;
-  parent_id?: number;
+  parent_id?: string;
   level?: number;
   is_active?: boolean;
   sort_order?: number;

@@ -3,15 +3,15 @@ import { useState, useCallback } from 'react';
 import { loadMainCategories as loadMainCats, loadSubcategories as loadSubCats } from '@/utils/categoryUtils';
 
 interface Category {
-  id: number;
+  id: string;
   name_ru: string;
   name_kz: string;
-  parent_id: number | null;
+  parent_id: string | null;
   level: number;
 }
 
 interface Breadcrumb {
-  id: number;
+  id: string;
   name_ru: string;
   name_kz: string;
 }
@@ -44,7 +44,7 @@ export const useCategorySteps = () => {
     }
   }, []);
 
-  const loadSubcategories = useCallback(async (parentId: number) => {
+  const loadSubcategories = useCallback(async (parentId: string) => {
     setLoading(true);
     setError(null);
     

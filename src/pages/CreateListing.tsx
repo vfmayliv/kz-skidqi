@@ -114,10 +114,10 @@ const CreateListing = () => {
   };
 
   // Обновленная функция обработки выбора категории
-  const handleCategoryChange = (categoryId: number) => {
+  const handleCategoryChange = (categoryId: string) => {
     setFormData((prev) => ({ 
       ...prev, 
-      categoryId: categoryId.toString()
+      categoryId: categoryId
     }));
   };
 
@@ -173,7 +173,7 @@ const CreateListing = () => {
         description: formData.description,
         regular_price: formData.regular_price || 0,
         discount_price: formData.discount_price || 0,
-        category_id: parseInt(formData.categoryId),
+        category_id: formData.categoryId, // Теперь это UUID строка
         user_id: user.id,
         city_id: formData.cityId ? parseInt(formData.cityId) : undefined,
         region_id: formData.regionId ? parseInt(formData.regionId) : undefined,
@@ -233,7 +233,7 @@ const CreateListing = () => {
         description: formData.description || "",
         regular_price: formData.regular_price || 0,
         discount_price: formData.discount_price || 0,
-        category_id: formData.categoryId ? parseInt(formData.categoryId) : 1,
+        category_id: formData.categoryId || null, // UUID строка или null
         user_id: user.id,
         city_id: formData.cityId ? parseInt(formData.cityId) : undefined,
         region_id: formData.regionId ? parseInt(formData.regionId) : undefined,
@@ -283,9 +283,9 @@ const CreateListing = () => {
               <CardContent className="p-6">
                 <h2 className="text-2xl font-bold mb-4">Создание объявления</h2>
 
-                {/* Category Selection - Updated to pass number instead of string */}
+                {/* Category Selection - Updated to use UUID string */}
                 <CategorySelector
-                  selectedCategoryId={formData.categoryId ? parseInt(formData.categoryId) : undefined}
+                  selectedCategoryId={formData.categoryId || undefined}
                   onCategorySelect={handleCategoryChange}
                 />
 

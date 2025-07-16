@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Category } from '@/types/category';
@@ -14,16 +15,23 @@ export function useCategories() {
       try {
         setLoading(true);
         const { data, error } = await supabase
-          .from('categories')
+          .from('listing_categories')
           .select('*')
           .is('parent_id', null)
-          .order('sort_order', { ascending: true });
+          .order('name_ru', { ascending: true });
 
         if (error) {
           throw error;
         }
 
-        setCategories(data);
+        // Преобразуем UUID в number для совместимости с существующим кодом
+        const transformedData = data?.map(item => ({
+          ...item,
+          id: parseInt(item.id.replace(/-/g, '').substring(0, 8), 16),
+          parent_id: item.parent_id ? parseInt(item.parent_id.replace(/-/g, '').substring(0, 8), 16) : null
+        })) || [];
+
+        setCategories(transformedData);
       } catch (err: any) {
         setError(err.message);
         console.error('Ошибка при загрузке категорий:', err);
@@ -39,17 +47,31 @@ export function useCategories() {
   const getSubcategories = async (parentId: number) => {
     setLoading(true);
     try {
+      // Преобразуем number обратно в UUID для запроса
+      const parentUuid = data?.find(cat => 
+        parseInt(cat.id.replace(/-/g, '').substring(0, 8), 16) === parentId
+      )?.id;
+
+      if (!parentUuid) return [];
+
       const { data, error } = await supabase
-        .from('categories')
+        .from('listing_categories')
         .select('*')
-        .eq('parent_id', parentId)
-        .order('sort_order', { ascending: true });
+        .eq('parent_id', parentUuid)
+        .order('name_ru', { ascending: true });
 
       if (error) {
         throw error;
       }
 
-      return data;
+      // Преобразуем UUID в number для совместимости
+      const transformedData = data?.map(item => ({
+        ...item,
+        id: parseInt(item.id.replace(/-/g, '').substring(0, 8), 16),
+        parent_id: item.parent_id ? parseInt(item.parent_id.replace(/-/g, '').substring(0, 8), 16) : null
+      })) || [];
+
+      return transformedData;
     } catch (err: any) {
       setError(err.message);
       console.error(`Ошибка при загрузке подкатегорий для ${parentId}:`, err);
@@ -63,7 +85,7 @@ export function useCategories() {
   const getCategoryBySlug = async (slug: string) => {
     try {
       const { data, error } = await supabase
-        .from('categories')
+        .from('listing_categories')
         .select('*')
         .eq('slug', slug)
         .single();
@@ -72,7 +94,12 @@ export function useCategories() {
         throw error;
       }
 
-      return data;
+      // Преобразуем UUID в number для совместимости
+      return {
+        ...data,
+        id: parseInt(data.id.replace(/-/g, '').substring(0, 8), 16),
+        parent_id: data.parent_id ? parseInt(data.parent_id.replace(/-/g, '').substring(0, 8), 16) : null
+      };
     } catch (err: any) {
       console.error(`Ошибка при поиске категории ${slug}:`, err);
       return null;
@@ -86,18 +113,32 @@ export function useCategories() {
 
     while (currentId) {
       try {
+        // Найдем UUID по числовому ID
+        const categoryUuid = categories.find(cat => 
+          parseInt(cat.id.replace(/-/g, '').substring(0, 8), 16) === currentId
+        )?.id;
+
+        if (!categoryUuid) break;
+
         const { data, error } = await supabase
-          .from('categories')
+          .from('listing_categories')
           .select('*')
-          .eq('id', currentId)
+          .eq('id', categoryUuid)
           .single();
 
         if (error || !data) {
           break;
         }
 
-        path.unshift(data); // Добавляем в начало массива
-        currentId = data.parent_id as number; // Переходим к родителю
+        // Преобразуем для совместимости
+        const transformedData = {
+          ...data,
+          id: parseInt(data.id.replace(/-/g, '').substring(0, 8), 16),
+          parent_id: data.parent_id ? parseInt(data.parent_id.replace(/-/g, '').substring(0, 8), 16) : null
+        };
+
+        path.unshift(transformedData);
+        currentId = transformedData.parent_id as number;
       } catch (err) {
         console.error('Ошибка при построении пути категории:', err);
         break;
