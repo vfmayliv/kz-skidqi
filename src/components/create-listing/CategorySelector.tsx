@@ -1,133 +1,228 @@
 
-import React from 'react';
+import React, { useEffect, memo } from 'react';
 import { Label } from '@/components/ui/label';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select';
-import { useCategoryHierarchy } from '@/hooks/useCategoryHierarchy';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { ChevronRight, ChevronLeft, Home, Loader2 } from 'lucide-react';
+import { useCategorySteps, CategoryStep } from '@/hooks/useCategorySteps';
+import { cn } from '@/lib/utils';
 
 interface CategorySelectorProps {
-  selectedCategories: (any | null)[];
-  onCategoryChange: (level: number, categoryId: string) => void;
+  selectedCategoryId: string | null;
+  onCategoryChange: (categoryId: string) => void;
 }
 
-export const CategorySelector: React.FC<CategorySelectorProps> = ({
-  selectedCategories,
+const CategoryCard = memo(({ 
+  category, 
+  onClick, 
+  isSelected = false 
+}: { 
+  category: CategoryStep; 
+  onClick: () => void;
+  isSelected?: boolean;
+}) => (
+  <Card 
+    className={cn(
+      "cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02]",
+      isSelected && "ring-2 ring-primary"
+    )}
+    onClick={onClick}
+  >
+    <CardContent className="p-4">
+      <div className="flex items-center justify-between">
+        <div className="flex-1">
+          <h3 className="font-medium text-sm mb-1">{category.name_ru}</h3>
+          <p className="text-xs text-muted-foreground">{category.name_kz}</p>
+        </div>
+        {category.hasChildren && (
+          <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0 ml-2" />
+        )}
+      </div>
+    </CardContent>
+  </Card>
+));
+
+CategoryCard.displayName = 'CategoryCard';
+
+const Breadcrumb = memo(({ 
+  categoryPath, 
+  onNavigate 
+}: { 
+  categoryPath: any[]; 
+  onNavigate: (stepIndex: number) => void;
+}) => (
+  <div className="flex items-center gap-2 mb-4 p-3 bg-muted/50 rounded-lg">
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={() => onNavigate(-1)}
+      className="h-8 px-2"
+    >
+      <Home className="h-4 w-4" />
+    </Button>
+    
+    {categoryPath.map((pathItem, index) => (
+      <React.Fragment key={pathItem.category.id}>
+        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onNavigate(index)}
+          className="h-8 px-2 text-xs"
+        >
+          {pathItem.category.name_ru}
+        </Button>
+      </React.Fragment>
+    ))}
+  </div>
+));
+
+Breadcrumb.displayName = 'Breadcrumb';
+
+export const CategorySelector: React.FC<CategorySelectorProps> = memo(({
+  selectedCategoryId,
   onCategoryChange
 }) => {
-  const { categories: categoryTree, loading: categoriesLoading } = useCategoryHierarchy();
+  const {
+    currentCategories,
+    categoryPath,
+    loading,
+    error,
+    loadMainCategories,
+    loadSubcategories,
+    goBack
+  } = useCategorySteps();
 
-  // Вспомогательная функция для поиска категории по ID
-  const findCategoryById = (categories: any[], id: string): any | null => {
-    for (const category of categories) {
-      if (category.id.toString() === id) {
-        return category;
-      }
-      if (category.children && category.children.length > 0) {
-        const found = findCategoryById(category.children, id);
-        if (found) return found;
-      }
+  useEffect(() => {
+    loadMainCategories();
+  }, [loadMainCategories]);
+
+  const handleCategoryClick = async (category: CategoryStep) => {
+    if (category.hasChildren) {
+      // Если у категории есть дочерние элементы, загружаем их
+      await loadSubcategories(category.id, category);
+    } else {
+      // Если это конечная категория, выбираем её
+      onCategoryChange(category.id.toString());
     }
-    return null;
   };
 
-  // Получаем доступные подкатегории для текущего уровня
-  const getAvailableCategories = (level: number) => {
-    if (level === 0) {
-      // Для первого уровня возвращаем корневые категории
-      return categoryTree;
-    }
-    
-    // Для последующих уровней возвращаем дочерние категории предыдущего выбранного элемента
-    const parentCategory = selectedCategories[level - 1];
-    return parentCategory?.children || [];
+  const handleBreadcrumbNavigation = async (stepIndex: number) => {
+    await goBack(stepIndex);
   };
 
-  // Получаем максимальный уровень для отображения селектов
-  const getMaxDisplayLevel = () => {
-    for (let i = 0; i < selectedCategories.length; i++) {
-      if (!selectedCategories[i]) {
-        return i;
-      }
-    }
-    return selectedCategories.length;
-  };
-
-  if (categoriesLoading) {
+  if (error) {
     return (
       <div className="mb-4">
         <Label>Категория *</Label>
-        <div className="text-sm text-gray-500">Загрузка категорий...</div>
+        <div className="p-4 border border-destructive/20 rounded-lg bg-destructive/5">
+          <p className="text-sm text-destructive">
+            Ошибка загрузки категорий: {error}
+          </p>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={loadMainCategories}
+            className="mt-2"
+          >
+            Попробовать снова
+          </Button>
+        </div>
       </div>
     );
   }
 
-  const maxLevel = getMaxDisplayLevel();
-  const levelLabels = ['Выберите категорию', 'Выберите подкатегорию', 'Выберите подкатегорию'];
-
   return (
-    <div className="mb-4">
-      <Label>Категория *</Label>
-      <div className="space-y-3">
-        {/* Динамически создаем селекты для каждого уровня */}
-        {Array.from({ length: maxLevel + 1 }, (_, level) => {
-          const availableCategories = getAvailableCategories(level);
-          const selectedValue = selectedCategories[level]?.id?.toString() || '';
-          
-          // Показываем селект только если есть доступные категории
-          if (availableCategories.length === 0) return null;
+    <div className="mb-6">
+      <Label className="text-base font-medium mb-3 block">Категория *</Label>
+      
+      {/* Хлебные крошки */}
+      {categoryPath.length > 0 && (
+        <Breadcrumb 
+          categoryPath={categoryPath} 
+          onNavigate={handleBreadcrumbNavigation}
+        />
+      )}
 
-          return (
-            <div key={level}>
-              <Select 
-                value={selectedValue}
-                onValueChange={(value) => onCategoryChange(level, value)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder={levelLabels[level] || `Уровень ${level + 1}`} />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableCategories.map((category: any) => (
-                    <SelectItem key={category.id} value={category.id.toString()}>
-                      {category.name_ru}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              {/* Показываем путь выбранных категорий */}
-              {selectedCategories[level] && (
-                <div className="text-xs text-gray-500 mt-1">
-                  Выбрано: {selectedCategories[level].name_ru}
-                  {selectedCategories[level].children && selectedCategories[level].children.length > 0 && (
-                    <span className="ml-2 text-blue-600">
-                      ({selectedCategories[level].children.length} подкатегорий доступно)
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
-        
-        {/* Показываем полный путь выбранных категорий */}
-        {selectedCategories.some(cat => cat !== null) && (
-          <div className="mt-3 p-3 bg-gray-50 rounded-md">
-            <div className="text-sm font-medium text-gray-700 mb-1">Выбранный путь:</div>
-            <div className="text-sm text-gray-600">
-              {selectedCategories
-                .filter(cat => cat !== null)
-                .map(cat => cat.name_ru)
-                .join(' → ')
-              }
-            </div>
-          </div>
-        )}
+      {/* Заголовок текущего уровня */}
+      <div className="mb-4">
+        <h3 className="text-sm font-medium text-muted-foreground">
+          {categoryPath.length === 0 
+            ? 'Выберите основную категорию'
+            : `Выберите подкатегорию в "${categoryPath[categoryPath.length - 1].category.name_ru}"`
+          }
+        </h3>
       </div>
+
+      {/* Индикатор загрузки */}
+      {loading && (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin mr-2" />
+          <span className="text-sm text-muted-foreground">Загрузка категорий...</span>
+        </div>
+      )}
+
+      {/* Сетка категорий */}
+      {!loading && currentCategories.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {currentCategories.map((category) => (
+            <CategoryCard
+              key={category.id}
+              category={category}
+              onClick={() => handleCategoryClick(category)}
+              isSelected={selectedCategoryId === category.id.toString()}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Сообщение о пустом списке */}
+      {!loading && currentCategories.length === 0 && (
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">Категории не найдены</p>
+        </div>
+      )}
+
+      {/* Выбранная категория */}
+      {selectedCategoryId && (
+        <div className="mt-4 p-3 bg-primary/5 border border-primary/20 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-primary">Выбранная категория:</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {categoryPath.map(p => p.category.name_ru).join(' → ')}
+                {categoryPath.length > 0 && ' → '}
+                {currentCategories.find(c => c.id.toString() === selectedCategoryId)?.name_ru}
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onCategoryChange('')}
+              className="text-xs"
+            >
+              Очистить
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Кнопка "Назад" */}
+      {categoryPath.length > 0 && (
+        <div className="mt-4 flex justify-start">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleBreadcrumbNavigation(categoryPath.length - 2)}
+            className="flex items-center gap-2"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Назад
+          </Button>
+        </div>
+      )}
     </div>
   );
-};
+});
+
+CategorySelector.displayName = 'CategorySelector';

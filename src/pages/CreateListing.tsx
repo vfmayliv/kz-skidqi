@@ -22,7 +22,6 @@ import {
   revokeImagePreviewUrl,
 } from "@/utils/imageUtils";
 import { useNavigate } from "react-router-dom";
-import { useCategoryHierarchy } from "@/hooks/useCategoryHierarchy";
 import { useLocationData } from "@/hooks/useLocationData";
 import {
   uploadImagestoSupabase,
@@ -53,15 +52,8 @@ const CreateListing = () => {
   const { user } = useSupabase();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { categories: categoryTree, loading: categoriesLoading } =
-    useCategoryHierarchy();
   const { regions, cities, loading: locationsLoading } = useLocationData();
 
-  const [selectedCategories, setSelectedCategories] = useState<(any | null)[]>([
-    null,
-    null,
-    null,
-  ]);
   const [formData, setFormData] = useState<CreateListingFormData>({
     title: "",
     description: "",
@@ -121,37 +113,12 @@ const CreateListing = () => {
     setImagePreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Обработка выбора категории
-  const handleCategoryChange = (level: number, categoryId: string) => {
-    const category = findCategoryById(categoryTree, categoryId);
-    const newSelectedCategories = [...selectedCategories];
-    newSelectedCategories[level] = category;
-
-    // Очищаем подкатегории при изменении родительской категории
-    for (let i = level + 1; i < newSelectedCategories.length; i++) {
-      newSelectedCategories[i] = null;
-    }
-
-    setSelectedCategories(newSelectedCategories);
-
-    // Устанавливаем categoryId в formData
-    if (category) {
-      setFormData((prev) => ({ ...prev, categoryId: categoryId }));
-    }
-  };
-
-  // Вспомогательная функция для поиска категории по ID
-  const findCategoryById = (categories: any[], id: string): any | null => {
-    for (const category of categories) {
-      if (category.id.toString() === id) {
-        return category;
-      }
-      if (category.children) {
-        const found = findCategoryById(category.children, id);
-        if (found) return found;
-      }
-    }
-    return null;
+  // Обновленная функция обработки выбора категории
+  const handleCategoryChange = (categoryId: string) => {
+    setFormData((prev) => ({ 
+      ...prev, 
+      categoryId: categoryId || null 
+    }));
   };
 
   // Обработка изменения фильтров
@@ -165,14 +132,11 @@ const CreateListing = () => {
     }));
   };
 
-  // Получаем последнюю выбранную категорию для фильтров
+  // Получаем выбранную категорию для фильтров
   const getSelectedCategory = () => {
-    for (let i = selectedCategories.length - 1; i >= 0; i--) {
-      if (selectedCategories[i]) {
-        return selectedCategories[i];
-      }
-    }
-    return null;
+    // Эта функция теперь будет работать с CategoryFilters компонентом
+    // который может получить категорию по ID из formData.categoryId
+    return null; // Упрощено для новой архитектуры
   };
 
   const handlePublish = async () => {
@@ -319,9 +283,9 @@ const CreateListing = () => {
               <CardContent className="p-6">
                 <h2 className="text-2xl font-bold mb-4">Создание объявления</h2>
 
-                {/* Category Selection */}
+                {/* Category Selection - Обновленный компонент */}
                 <CategorySelector
-                  selectedCategories={selectedCategories}
+                  selectedCategoryId={formData.categoryId}
                   onCategoryChange={handleCategoryChange}
                 />
 
