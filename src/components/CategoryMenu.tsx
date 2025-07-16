@@ -100,44 +100,59 @@ export const CategoryMenu = () => {
       try {
         // Сначала попробуем получить основные категории по условию parent_id IS NULL
         const { data: parentNullData, error: parentNullError } = await supabase
-          .from('categories')
+          .from('listing_categories')
           .select('*')
           .is('parent_id', null)
-          .eq('is_active', true)
-          .order('sort_order', { ascending: true });
+          .order('name_ru', { ascending: true });
 
         if (parentNullError) {
           console.error('Ошибка при загрузке категорий с parent_id = null:', parentNullError);
         }
 
-        // Если получили ровно 13 категорий, используем их
-        if (parentNullData && parentNullData.length === 13) {
-          setMainCategories(parentNullData);
+        // Если получили категории, используем их
+        if (parentNullData && parentNullData.length > 0) {
+          // Преобразуем данные к нужному формату
+          const transformedData: Category[] = parentNullData.map(item => ({
+            id: item.id,
+            name_ru: item.name_ru,
+            name_kz: item.name_kz,
+            slug: item.slug,
+            parent_id: item.parent_id,
+            level: item.level,
+            is_active: true,
+            sort_order: 0,
+            icon: 'folder' // Дефолтная иконка
+          }));
+          
+          setMainCategories(transformedData.slice(0, 13)); // Берем первые 13
         } 
-        // Иначе, получаем все категории и отбираем 13 основных по ID или другим критериям
+        // Иначе, получаем все категории и отбираем основные
         else {
           const { data: allData, error: allError } = await supabase
-            .from('categories')
+            .from('listing_categories')
             .select('*')
-            .eq('is_active', true)
-            .order('id', { ascending: true });
+            .order('name_ru', { ascending: true });
 
           if (allError) {
             console.error('Ошибка при загрузке всех категорий:', allError);
             return;
           }
 
-          // Отбираем основные категории по массиву MAIN_CATEGORY_IDS
-          // Или берём первые 13 категорий, если не найдём точное соответствие
-          const mainCats = allData
-            .filter(cat => MAIN_CATEGORY_IDS.includes(cat.id))
-            .sort((a, b) => a.sort_order - b.sort_order);
-          
-          if (mainCats.length > 0) {
-            setMainCategories(mainCats);
-          } else {
-            // Запасной вариант - берем первые 13 категорий
-            setMainCategories(allData.slice(0, 13));
+          if (allData && allData.length > 0) {
+            // Преобразуем данные к нужному формату
+            const transformedData: Category[] = allData.map(item => ({
+              id: item.id,
+              name_ru: item.name_ru,
+              name_kz: item.name_kz,
+              slug: item.slug,
+              parent_id: item.parent_id,
+              level: item.level,
+              is_active: true,
+              sort_order: 0,
+              icon: 'folder' // Дефолтная иконка
+            }));
+            
+            setMainCategories(transformedData.slice(0, 13)); // Берем первые 13
           }
         }
 

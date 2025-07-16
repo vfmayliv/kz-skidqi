@@ -9,17 +9,17 @@ import { supabase } from '@/lib/supabase';
 import { ChevronDown, ChevronRight, Search, X } from 'lucide-react';
 
 interface Category {
-  id: number;
+  id: string;
   name_ru: string;
-  name_kk: string;
-  parent_id: number | null;
+  name_kz: string;
+  parent_id: string | null;
   level: number;
   children?: Category[];
 }
 
 interface CategoryTreeSelectorProps {
-  selectedCategories: number[];
-  onCategoriesChange: (categoryIds: number[]) => void;
+  selectedCategories: string[];
+  onCategoriesChange: (categoryIds: string[]) => void;
   multiSelect?: boolean;
 }
 
@@ -30,7 +30,7 @@ export const CategoryTreeSelector = ({
 }: CategoryTreeSelectorProps) => {
   const { toast } = useToast();
   const [categories, setCategories] = useState<Category[]>([]);
-  const [expandedNodes, setExpandedNodes] = useState<Set<number>>(new Set());
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [filteredCategories, setFilteredCategories] = useState<Category[]>([]);
@@ -51,10 +51,10 @@ export const CategoryTreeSelector = ({
   const fetchCategories = async () => {
     try {
       const { data, error } = await supabase
-        .from('categories')
+        .from('listing_categories')
         .select('*')
         .order('level', { ascending: true })
-        .order('sort_order', { ascending: true });
+        .order('name_ru', { ascending: true });
 
       if (error) throw error;
 
@@ -73,7 +73,7 @@ export const CategoryTreeSelector = ({
   };
 
   const buildCategoryTree = (flatCategories: any[]): Category[] => {
-    const categoryMap = new Map<number, Category>();
+    const categoryMap = new Map<string, Category>();
     const rootCategories: Category[] = [];
 
     // Создаем карту категорий
@@ -106,7 +106,7 @@ export const CategoryTreeSelector = ({
 
     for (const category of categories) {
       const matches = category.name_ru.toLowerCase().includes(term) || 
-                     category.name_kk.toLowerCase().includes(term);
+                     category.name_kz.toLowerCase().includes(term);
       
       const filteredChildren = category.children ? filterCategories(category.children, term) : [];
       
@@ -121,7 +121,7 @@ export const CategoryTreeSelector = ({
     return filtered;
   };
 
-  const toggleExpanded = (categoryId: number) => {
+  const toggleExpanded = (categoryId: string) => {
     setExpandedNodes(prev => {
       const newSet = new Set(prev);
       if (newSet.has(categoryId)) {
@@ -133,7 +133,7 @@ export const CategoryTreeSelector = ({
     });
   };
 
-  const handleCategorySelect = (categoryId: number) => {
+  const handleCategorySelect = (categoryId: string) => {
     if (multiSelect) {
       const newSelection = selectedCategories.includes(categoryId)
         ? selectedCategories.filter(id => id !== categoryId)
@@ -145,7 +145,7 @@ export const CategoryTreeSelector = ({
   };
 
   const getSelectedCategoryNames = () => {
-    const findCategoryName = (categories: Category[], id: number): string | null => {
+    const findCategoryName = (categories: Category[], id: string): string | null => {
       for (const cat of categories) {
         if (cat.id === id) return cat.name_ru;
         if (cat.children) {

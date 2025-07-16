@@ -24,12 +24,18 @@ export function useCategories() {
           throw error;
         }
 
-        // Преобразуем UUID в number для совместимости с существующим кодом
-        const transformedData = data?.map(item => ({
-          ...item,
-          id: parseInt(item.id.replace(/-/g, '').substring(0, 8), 16),
-          parent_id: item.parent_id ? parseInt(item.parent_id.replace(/-/g, '').substring(0, 8), 16) : null
-        })) || [];
+        // Преобразуем данные к формату Category
+        const transformedData: Category[] = (data || []).map(item => ({
+          id: item.id,
+          name_ru: item.name_ru,
+          name_kz: item.name_kz,
+          slug: item.slug,
+          parent_id: item.parent_id,
+          level: item.level,
+          is_active: true,
+          sort_order: 0,
+          icon: 'folder'
+        }));
 
         setCategories(transformedData);
       } catch (err: any) {
@@ -44,32 +50,31 @@ export function useCategories() {
   }, []);
 
   // Получение подкатегорий для конкретной категории
-  const getSubcategories = async (parentId: number) => {
+  const getSubcategories = async (parentId: string) => {
     setLoading(true);
     try {
-      // Преобразуем number обратно в UUID для запроса
-      const parentUuid = data?.find(cat => 
-        parseInt(cat.id.replace(/-/g, '').substring(0, 8), 16) === parentId
-      )?.id;
-
-      if (!parentUuid) return [];
-
       const { data, error } = await supabase
         .from('listing_categories')
         .select('*')
-        .eq('parent_id', parentUuid)
+        .eq('parent_id', parentId)
         .order('name_ru', { ascending: true });
 
       if (error) {
         throw error;
       }
 
-      // Преобразуем UUID в number для совместимости
-      const transformedData = data?.map(item => ({
-        ...item,
-        id: parseInt(item.id.replace(/-/g, '').substring(0, 8), 16),
-        parent_id: item.parent_id ? parseInt(item.parent_id.replace(/-/g, '').substring(0, 8), 16) : null
-      })) || [];
+      // Преобразуем данные к формату Category
+      const transformedData: Category[] = (data || []).map(item => ({
+        id: item.id,
+        name_ru: item.name_ru,
+        name_kz: item.name_kz,
+        slug: item.slug,
+        parent_id: item.parent_id,
+        level: item.level,
+        is_active: true,
+        sort_order: 0,
+        icon: 'folder'
+      }));
 
       return transformedData;
     } catch (err: any) {
@@ -94,12 +99,18 @@ export function useCategories() {
         throw error;
       }
 
-      // Преобразуем UUID в number для совместимости
+      // Преобразуем к формату Category
       return {
-        ...data,
-        id: parseInt(data.id.replace(/-/g, '').substring(0, 8), 16),
-        parent_id: data.parent_id ? parseInt(data.parent_id.replace(/-/g, '').substring(0, 8), 16) : null
-      };
+        id: data.id,
+        name_ru: data.name_ru,
+        name_kz: data.name_kz,
+        slug: data.slug,
+        parent_id: data.parent_id,
+        level: data.level,
+        is_active: true,
+        sort_order: 0,
+        icon: 'folder'
+      } as Category;
     } catch (err: any) {
       console.error(`Ошибка при поиске категории ${slug}:`, err);
       return null;
@@ -107,38 +118,37 @@ export function useCategories() {
   };
 
   // Получение полного пути категорий (для хлебных крошек)
-  const getCategoryPath = async (categoryId: number) => {
+  const getCategoryPath = async (categoryId: string) => {
     const path: Category[] = [];
     let currentId = categoryId;
 
     while (currentId) {
       try {
-        // Найдем UUID по числовому ID
-        const categoryUuid = categories.find(cat => 
-          parseInt(cat.id.replace(/-/g, '').substring(0, 8), 16) === currentId
-        )?.id;
-
-        if (!categoryUuid) break;
-
         const { data, error } = await supabase
           .from('listing_categories')
           .select('*')
-          .eq('id', categoryUuid)
+          .eq('id', currentId)
           .single();
 
         if (error || !data) {
           break;
         }
 
-        // Преобразуем для совместимости
-        const transformedData = {
-          ...data,
-          id: parseInt(data.id.replace(/-/g, '').substring(0, 8), 16),
-          parent_id: data.parent_id ? parseInt(data.parent_id.replace(/-/g, '').substring(0, 8), 16) : null
+        // Преобразуем к формату Category
+        const transformedData: Category = {
+          id: data.id,
+          name_ru: data.name_ru,
+          name_kz: data.name_kz,
+          slug: data.slug,
+          parent_id: data.parent_id,
+          level: data.level,
+          is_active: true,
+          sort_order: 0,
+          icon: 'folder'
         };
 
         path.unshift(transformedData);
-        currentId = transformedData.parent_id as number;
+        currentId = transformedData.parent_id;
       } catch (err) {
         console.error('Ошибка при построении пути категории:', err);
         break;
