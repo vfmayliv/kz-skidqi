@@ -1,4 +1,3 @@
-
 {
   "siteName": "SKIDQI.COM",
   "tagline": "Доска объявлений со скидками в Казахстане",
@@ -194,5 +193,12 @@
   "reply": "Ответить",
   "no.messages": "У вас пока нет сообщений",
   "no.notifications": "У вас пока нет уведомлений",
-  "no.reviews": "У вас пока нет отзывов"
+  "no.reviews": "У вас пока нет отзывов",
+  "select.category": "Выберите категорию",
+  "main.categories": "Основные категории",
+  "back": "Назад",
+  "no.categories": "Нет доступных категорий",
+  "has.subcategories": "Есть подкатегории",
+  "error.loading.categories": "Ошибка загрузки категорий",
+  "try.again": "Попробовать снова"
 }

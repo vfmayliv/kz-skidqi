@@ -1,24 +1,25 @@
 
 import { useState, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { loadMainCategories as loadMainCats, loadSubcategories as loadSubCats } from '@/utils/categoryUtils';
 
-export interface CategoryStep {
+interface Category {
   id: number;
   name_ru: string;
   name_kz: string;
+  parent_id: number | null;
   level: number;
-  parent_id?: number;
-  hasChildren?: boolean;
 }
 
-export interface CategoryPath {
-  step: number;
-  category: CategoryStep;
+interface Breadcrumb {
+  id: number;
+  name_ru: string;
+  name_kz: string;
 }
 
 export const useCategorySteps = () => {
-  const [currentCategories, setCurrentCategories] = useState<CategoryStep[]>([]);
-  const [categoryPath, setCategoryPath] = useState<CategoryPath[]>([]);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [breadcrumbs, setBreadcrumbs] = useState<Breadcrumb[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,123 +28,93 @@ export const useCategorySteps = () => {
     setError(null);
     
     try {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('id, name_ru, name_kz, level, parent_id')
-        .is('parent_id', null)
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true });
-
-      if (error) throw error;
-
-      // Проверяем, есть ли у каждой категории дочерние элементы
-      const categoriesWithChildren = await Promise.all(
-        (data || []).map(async (category) => {
-          const { count } = await supabase
-            .from('categories')
-            .select('*', { count: 'exact', head: true })
-            .eq('parent_id', category.id)
-            .eq('is_active', true);
-
-          return {
-            ...category,
-            hasChildren: (count || 0) > 0
-          };
-        })
-      );
-
-      setCurrentCategories(categoriesWithChildren);
-    } catch (err: any) {
-      setError(err.message);
-      console.error('Ошибка загрузки основных категорий:', err);
+      console.log('Loading main categories...');
+      const mainCategories = await loadMainCats();
+      console.log('Loaded main categories:', mainCategories);
+      
+      setCategories(mainCategories);
+      setBreadcrumbs([]);
+      setCurrentStep(0);
+    } catch (err) {
+      console.error('Error loading main categories:', err);
+      setError('Failed to load categories');
+      setCategories([]);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const loadSubcategories = useCallback(async (parentId: number, parentCategory: CategoryStep) => {
+  const loadSubcategories = useCallback(async (parentId: number) => {
     setLoading(true);
     setError(null);
-
+    
     try {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('id, name_ru, name_kz, level, parent_id')
-        .eq('parent_id', parentId)
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true });
-
-      if (error) throw error;
-
-      // Проверяем, есть ли у каждой подкатегории дочерние элементы
-      const categoriesWithChildren = await Promise.all(
-        (data || []).map(async (category) => {
-          const { count } = await supabase
-            .from('categories')
-            .select('*', { count: 'exact', head: true })
-            .eq('parent_id', category.id)
-            .eq('is_active', true);
-
-          return {
-            ...category,
-            hasChildren: (count || 0) > 0
-          };
-        })
-      );
-
-      setCurrentCategories(categoriesWithChildren);
+      console.log('Loading subcategories for parent:', parentId);
+      const subcategories = await loadSubCats(parentId);
+      console.log('Loaded subcategories:', subcategories);
       
-      // Добавляем в путь текущую выбранную категорию
-      const newStep = categoryPath.length;
-      setCategoryPath(prev => [...prev, { step: newStep, category: parentCategory }]);
+      // Find the parent category to add to breadcrumbs
+      const parentCategory = categories.find(cat => cat.id === parentId);
+      if (parentCategory) {
+        setBreadcrumbs(prev => [...prev, {
+          id: parentCategory.id,
+          name_ru: parentCategory.name_ru,
+          name_kz: parentCategory.name_kz
+        }]);
+      }
       
-    } catch (err: any) {
-      setError(err.message);
-      console.error('Ошибка загрузки подкатегорий:', err);
+      setCategories(subcategories);
+      setCurrentStep(prev => prev + 1);
+    } catch (err) {
+      console.error('Error loading subcategories:', err);
+      setError('Failed to load subcategories');
     } finally {
       setLoading(false);
     }
-  }, [categoryPath]);
+  }, [categories]);
 
-  const goBack = useCallback(async (stepIndex: number) => {
-    if (stepIndex === -1) {
-      // Возврат к основным категориям
-      setCategoryPath([]);
+  const goBack = useCallback(async () => {
+    if (breadcrumbs.length === 0) return;
+    
+    const newBreadcrumbs = [...breadcrumbs];
+    newBreadcrumbs.pop();
+    setBreadcrumbs(newBreadcrumbs);
+    
+    if (newBreadcrumbs.length === 0) {
+      // Go back to main categories
       await loadMainCategories();
-    } else if (stepIndex < categoryPath.length - 1) {
-      // Возврат к определенному шагу
-      const targetPath = categoryPath.slice(0, stepIndex + 1);
-      setCategoryPath(targetPath);
-      
-      const targetCategory = targetPath[targetPath.length - 1].category;
-      await loadSubcategories(targetCategory.id, targetCategory);
+    } else {
+      // Load subcategories of the previous level
+      const parentId = newBreadcrumbs[newBreadcrumbs.length - 1].id;
+      setLoading(true);
+      try {
+        const subcategories = await loadSubCats(parentId);
+        setCategories(subcategories);
+        setCurrentStep(prev => prev - 1);
+      } catch (err) {
+        console.error('Error loading previous level:', err);
+        setError('Failed to load previous level');
+      } finally {
+        setLoading(false);
+      }
     }
-  }, [categoryPath, loadMainCategories, loadSubcategories]);
+  }, [breadcrumbs, loadMainCategories]);
 
-  const resetSelection = useCallback(() => {
-    setCategoryPath([]);
-    setCurrentCategories([]);
-    setError(null);
-  }, []);
-
-  const getSelectedCategory = useCallback(() => {
-    return categoryPath.length > 0 ? categoryPath[categoryPath.length - 1].category : null;
-  }, [categoryPath]);
-
-  const getCurrentLevel = useCallback(() => {
-    return categoryPath.length;
-  }, [categoryPath]);
+  const reset = useCallback(() => {
+    setCurrentStep(0);
+    setBreadcrumbs([]);
+    loadMainCategories();
+  }, [loadMainCategories]);
 
   return {
-    currentCategories,
-    categoryPath,
+    currentStep,
+    categories,
+    breadcrumbs,
     loading,
     error,
     loadMainCategories,
     loadSubcategories,
     goBack,
-    resetSelection,
-    getSelectedCategory,
-    getCurrentLevel
+    reset
   };
 };

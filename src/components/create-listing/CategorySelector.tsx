@@ -1,228 +1,158 @@
 
-import React, { useEffect, memo } from 'react';
-import { Label } from '@/components/ui/label';
+import React, { useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { ChevronRight, ChevronLeft, Home, Loader2 } from 'lucide-react';
-import { useCategorySteps, CategoryStep } from '@/hooks/useCategorySteps';
-import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { ChevronRight, ArrowLeft, Loader2 } from 'lucide-react';
+import { useCategorySteps } from '@/hooks/useCategorySteps';
+import { useTranslation } from '@/hooks/use-translation';
 
 interface CategorySelectorProps {
-  selectedCategoryId: string | null;
-  onCategoryChange: (categoryId: string) => void;
+  onCategorySelect: (categoryId: number) => void;
+  selectedCategoryId?: number;
 }
 
-const CategoryCard = memo(({ 
-  category, 
-  onClick, 
-  isSelected = false 
-}: { 
-  category: CategoryStep; 
-  onClick: () => void;
-  isSelected?: boolean;
-}) => (
-  <Card 
-    className={cn(
-      "cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02]",
-      isSelected && "ring-2 ring-primary"
-    )}
-    onClick={onClick}
-  >
-    <CardContent className="p-4">
-      <div className="flex items-center justify-between">
-        <div className="flex-1">
-          <h3 className="font-medium text-sm mb-1">{category.name_ru}</h3>
-          <p className="text-xs text-muted-foreground">{category.name_kz}</p>
-        </div>
-        {category.hasChildren && (
-          <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0 ml-2" />
-        )}
-      </div>
-    </CardContent>
-  </Card>
-));
-
-CategoryCard.displayName = 'CategoryCard';
-
-const Breadcrumb = memo(({ 
-  categoryPath, 
-  onNavigate 
-}: { 
-  categoryPath: any[]; 
-  onNavigate: (stepIndex: number) => void;
-}) => (
-  <div className="flex items-center gap-2 mb-4 p-3 bg-muted/50 rounded-lg">
-    <Button
-      variant="ghost"
-      size="sm"
-      onClick={() => onNavigate(-1)}
-      className="h-8 px-2"
-    >
-      <Home className="h-4 w-4" />
-    </Button>
-    
-    {categoryPath.map((pathItem, index) => (
-      <React.Fragment key={pathItem.category.id}>
-        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => onNavigate(index)}
-          className="h-8 px-2 text-xs"
-        >
-          {pathItem.category.name_ru}
-        </Button>
-      </React.Fragment>
-    ))}
-  </div>
-));
-
-Breadcrumb.displayName = 'Breadcrumb';
-
-export const CategorySelector: React.FC<CategorySelectorProps> = memo(({
-  selectedCategoryId,
-  onCategoryChange
+const CategorySelector: React.FC<CategorySelectorProps> = ({ 
+  onCategorySelect, 
+  selectedCategoryId 
 }) => {
+  const { t } = useTranslation();
   const {
-    currentCategories,
-    categoryPath,
+    currentStep,
+    categories,
+    breadcrumbs,
     loading,
     error,
     loadMainCategories,
     loadSubcategories,
-    goBack
+    goBack,
+    reset
   } = useCategorySteps();
 
   useEffect(() => {
     loadMainCategories();
   }, [loadMainCategories]);
 
-  const handleCategoryClick = async (category: CategoryStep) => {
-    if (category.hasChildren) {
-      // Если у категории есть дочерние элементы, загружаем их
-      await loadSubcategories(category.id, category);
-    } else {
-      // Если это конечная категория, выбираем её
-      onCategoryChange(category.id.toString());
+  const handleCategoryClick = async (category: any) => {
+    console.log('Category clicked:', category);
+    
+    // If this is a leaf category (no subcategories), select it
+    if (category.level >= 4) {
+      onCategorySelect(category.id);
+      return;
     }
+    
+    // Load subcategories
+    await loadSubcategories(category.id);
   };
 
-  const handleBreadcrumbNavigation = async (stepIndex: number) => {
-    await goBack(stepIndex);
+  const handleBreadcrumbClick = (index: number) => {
+    if (index === 0) {
+      reset();
+    } else {
+      // Go back to specific level
+      for (let i = breadcrumbs.length - 1; i > index; i--) {
+        goBack();
+      }
+    }
   };
 
   if (error) {
     return (
-      <div className="mb-4">
-        <Label>Категория *</Label>
-        <div className="p-4 border border-destructive/20 rounded-lg bg-destructive/5">
-          <p className="text-sm text-destructive">
-            Ошибка загрузки категорий: {error}
-          </p>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={loadMainCategories}
-            className="mt-2"
-          >
-            Попробовать снова
-          </Button>
-        </div>
-      </div>
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center text-red-500">
+            <p>{t('error.loading.categories')}</p>
+            <Button 
+              variant="outline" 
+              onClick={loadMainCategories}
+              className="mt-2"
+            >
+              {t('try.again')}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="mb-6">
-      <Label className="text-base font-medium mb-3 block">Категория *</Label>
-      
-      {/* Хлебные крошки */}
-      {categoryPath.length > 0 && (
-        <Breadcrumb 
-          categoryPath={categoryPath} 
-          onNavigate={handleBreadcrumbNavigation}
-        />
-      )}
-
-      {/* Заголовок текущего уровня */}
-      <div className="mb-4">
-        <h3 className="text-sm font-medium text-muted-foreground">
-          {categoryPath.length === 0 
-            ? 'Выберите основную категорию'
-            : `Выберите подкатегорию в "${categoryPath[categoryPath.length - 1].category.name_ru}"`
-          }
-        </h3>
-      </div>
-
-      {/* Индикатор загрузки */}
-      {loading && (
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin mr-2" />
-          <span className="text-sm text-muted-foreground">Загрузка категорий...</span>
-        </div>
-      )}
-
-      {/* Сетка категорий */}
-      {!loading && currentCategories.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {currentCategories.map((category) => (
-            <CategoryCard
-              key={category.id}
-              category={category}
-              onClick={() => handleCategoryClick(category)}
-              isSelected={selectedCategoryId === category.id.toString()}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Сообщение о пустом списке */}
-      {!loading && currentCategories.length === 0 && (
-        <div className="text-center py-8">
-          <p className="text-muted-foreground">Категории не найдены</p>
-        </div>
-      )}
-
-      {/* Выбранная категория */}
-      {selectedCategoryId && (
-        <div className="mt-4 p-3 bg-primary/5 border border-primary/20 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-primary">Выбранная категория:</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {categoryPath.map(p => p.category.name_ru).join(' → ')}
-                {categoryPath.length > 0 && ' → '}
-                {currentCategories.find(c => c.id.toString() === selectedCategoryId)?.name_ru}
-              </p>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onCategoryChange('')}
-              className="text-xs"
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          {t('select.category')}
+          {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+        </CardTitle>
+        
+        {/* Breadcrumbs */}
+        {breadcrumbs.length > 0 && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <button
+              onClick={() => handleBreadcrumbClick(0)}
+              className="hover:text-primary transition-colors"
             >
-              Очистить
-            </Button>
+              {t('main.categories')}
+            </button>
+            {breadcrumbs.map((crumb, index) => (
+              <React.Fragment key={index}>
+                <ChevronRight className="h-3 w-3" />
+                <button
+                  onClick={() => handleBreadcrumbClick(index + 1)}
+                  className="hover:text-primary transition-colors"
+                >
+                  {crumb.name_ru}
+                </button>
+              </React.Fragment>
+            ))}
           </div>
-        </div>
-      )}
-
-      {/* Кнопка "Назад" */}
-      {categoryPath.length > 0 && (
-        <div className="mt-4 flex justify-start">
+        )}
+        
+        {/* Back button */}
+        {breadcrumbs.length > 0 && (
           <Button
             variant="outline"
             size="sm"
-            onClick={() => handleBreadcrumbNavigation(categoryPath.length - 2)}
-            className="flex items-center gap-2"
+            onClick={goBack}
+            className="w-fit"
           >
-            <ChevronLeft className="h-4 w-4" />
-            Назад
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            {t('back')}
           </Button>
-        </div>
-      )}
-    </div>
+        )}
+      </CardHeader>
+      
+      <CardContent>
+        {categories.length === 0 && !loading ? (
+          <div className="text-center text-muted-foreground">
+            {t('no.categories')}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {categories.map((category) => (
+              <Button
+                key={category.id}
+                variant={selectedCategoryId === category.id ? "default" : "outline"}
+                className="h-auto p-4 text-left justify-start"
+                onClick={() => handleCategoryClick(category)}
+              >
+                <div className="flex flex-col items-start w-full">
+                  <span className="font-medium">{category.name_ru}</span>
+                  {category.level < 4 && (
+                    <Badge variant="secondary" className="mt-1">
+                      {t('has.subcategories')}
+                    </Badge>
+                  )}
+                </div>
+                {category.level < 4 && (
+                  <ChevronRight className="h-4 w-4 ml-auto" />
+                )}
+              </Button>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
-});
+};
 
-CategorySelector.displayName = 'CategorySelector';
+export default CategorySelector;
