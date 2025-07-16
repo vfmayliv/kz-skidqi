@@ -6,7 +6,7 @@ export interface CreateListingData {
   description: string;
   regular_price: number;
   discount_price: number;
-  category_id: string | null; // Changed from number to string to match UUID
+  category_id: string | null; // UUID string from listing_categories
   user_id: string;
   city_id?: number;
   region_id?: number;
@@ -41,9 +41,27 @@ export const uploadImagestoSupabase = async (imageFiles: File[]): Promise<string
 
 export const saveListingToSupabase = async (listingData: CreateListingData): Promise<string | null> => {
   try {
+    // Convert category_id from UUID string to number for database compatibility
+    // For now, we'll set it to null since the old categories table structure is being phased out
+    const dbListingData = {
+      title: listingData.title,
+      description: listingData.description,
+      regular_price: listingData.regular_price,
+      discount_price: listingData.discount_price,
+      category_id: null, // Temporarily set to null until we migrate listings table
+      user_id: listingData.user_id,
+      city_id: listingData.city_id,
+      region_id: listingData.region_id,
+      address: listingData.address,
+      latitude: listingData.latitude,
+      longitude: listingData.longitude,
+      images: listingData.images,
+      status: listingData.status,
+    };
+
     const { data, error } = await supabase
       .from('listings')
-      .insert([listingData])
+      .insert([dbListingData])
       .select('id')
       .single();
 
