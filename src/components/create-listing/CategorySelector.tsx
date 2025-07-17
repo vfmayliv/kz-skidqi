@@ -23,8 +23,10 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
     breadcrumbs,
     loading,
     error,
+    checkingChildren,
     loadMainCategories,
     loadSubcategories,
+    checkIfLeafCategory,
     goBack,
     reset
   } = useCategorySteps();
@@ -36,14 +38,18 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
   const handleCategoryClick = async (category: any) => {
     console.log('Category clicked:', category);
     
-    // If this is a leaf category (no subcategories), select it
-    if (category.level >= 4) {
-      onCategorySelect(category.id);
-      return;
-    }
+    // Show loading state for this specific category
+    const isLeaf = await checkIfLeafCategory(category.id);
     
-    // Load subcategories
-    await loadSubcategories(category.id);
+    if (isLeaf) {
+      // This is a leaf category (no subcategories), select it
+      console.log('Selecting leaf category:', category.id);
+      onCategorySelect(category.id);
+    } else {
+      // This category has subcategories, load them
+      console.log('Loading subcategories for:', category.id);
+      await loadSubcategories(category.id);
+    }
   };
 
   const handleBreadcrumbClick = (index: number) => {
@@ -132,20 +138,28 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
               <Button
                 key={category.id}
                 variant={selectedCategoryId === category.id ? "default" : "outline"}
-                className="h-auto p-4 text-left justify-start"
+                className="h-auto p-4 text-left justify-start relative"
                 onClick={() => handleCategoryClick(category)}
+                disabled={loading || checkingChildren === category.id}
               >
                 <div className="flex flex-col items-start w-full">
                   <span className="font-medium">{category.name_ru}</span>
-                  {category.level < 4 && (
-                    <Badge variant="secondary" className="mt-1">
-                      {t('has.subcategories')}
-                    </Badge>
-                  )}
+                  <div className="flex items-center gap-2 mt-1">
+                    {checkingChildren === category.id ? (
+                      <div className="flex items-center gap-1">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        <span className="text-xs text-muted-foreground">
+                          {t('checking')}...
+                        </span>
+                      </div>
+                    ) : (
+                      <Badge variant="secondary" className="text-xs">
+                        {t('click.to.explore')}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
-                {category.level < 4 && (
-                  <ChevronRight className="h-4 w-4 ml-auto" />
-                )}
+                <ChevronRight className="h-4 w-4 ml-auto opacity-50" />
               </Button>
             ))}
           </div>

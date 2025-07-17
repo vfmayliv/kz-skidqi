@@ -1,6 +1,10 @@
 
 import { useState, useCallback } from 'react';
-import { loadMainCategories as loadMainCats, loadSubcategories as loadSubCats } from '@/utils/categoryUtils';
+import { 
+  loadMainCategories as loadMainCats, 
+  loadSubcategories as loadSubCats,
+  hasSubcategories
+} from '@/utils/categoryUtils';
 
 interface Category {
   id: string;
@@ -8,6 +12,7 @@ interface Category {
   name_kz: string;
   parent_id: string | null;
   level: number;
+  slug: string;
 }
 
 interface Breadcrumb {
@@ -22,6 +27,7 @@ export const useCategorySteps = () => {
   const [breadcrumbs, setBreadcrumbs] = useState<Breadcrumb[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [checkingChildren, setCheckingChildren] = useState<string | null>(null);
 
   const loadMainCategories = useCallback(async () => {
     setLoading(true);
@@ -73,6 +79,19 @@ export const useCategorySteps = () => {
     }
   }, [categories]);
 
+  const checkIfLeafCategory = useCallback(async (categoryId: string): Promise<boolean> => {
+    setCheckingChildren(categoryId);
+    try {
+      const hasChildren = await hasSubcategories(categoryId);
+      return !hasChildren;
+    } catch (err) {
+      console.error('Error checking if category is leaf:', err);
+      return false;
+    } finally {
+      setCheckingChildren(null);
+    }
+  }, []);
+
   const goBack = useCallback(async () => {
     if (breadcrumbs.length === 0) return;
     
@@ -112,8 +131,10 @@ export const useCategorySteps = () => {
     breadcrumbs,
     loading,
     error,
+    checkingChildren,
     loadMainCategories,
     loadSubcategories,
+    checkIfLeafCategory,
     goBack,
     reset
   };

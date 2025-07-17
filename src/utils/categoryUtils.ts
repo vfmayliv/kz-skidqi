@@ -56,6 +56,29 @@ export const loadSubcategories = async (parentId: string): Promise<Category[]> =
   }
 };
 
+export const hasSubcategories = async (categoryId: string): Promise<boolean> => {
+  try {
+    console.log('🔄 Checking subcategories for category:', categoryId);
+    
+    const { count, error } = await supabase
+      .from('listing_categories')
+      .select('id', { count: 'exact', head: true })
+      .eq('parent_id', categoryId);
+
+    if (error) {
+      console.error('❌ Error checking subcategories:', error);
+      return false;
+    }
+
+    const hasChildren = (count || 0) > 0;
+    console.log(`✅ Category ${categoryId} has children:`, hasChildren);
+    return hasChildren;
+  } catch (error) {
+    console.error('❌ Exception checking subcategories:', error);
+    return false;
+  }
+};
+
 export const getCategoryPath = async (categoryId: string): Promise<Category[]> => {
   const path: Category[] = [];
   let currentId: string | null = categoryId;
