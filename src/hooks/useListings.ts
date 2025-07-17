@@ -83,7 +83,7 @@ export function useListings() {
       let query = supabase.from('listings').select(`
         *,
         cities(name_ru, name_kz),
-        categories(name_ru, name_kz)
+        listing_categories(name_ru, name_kz)
       `, { count: 'exact' });
 
       // Apply filters

@@ -480,6 +480,24 @@ export type Database = {
           },
         ]
       }
+      category_id_mapping: {
+        Row: {
+          new_id: string | null
+          old_id: string
+          source_table: string
+        }
+        Insert: {
+          new_id?: string | null
+          old_id: string
+          source_table: string
+        }
+        Update: {
+          new_id?: string | null
+          old_id?: string
+          source_table?: string
+        }
+        Relationships: []
+      }
       children_categories: {
         Row: {
           created_at: string | null
