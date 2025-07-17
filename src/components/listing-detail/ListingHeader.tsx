@@ -15,8 +15,8 @@ interface ListingHeaderProps {
   isFeatured: boolean;
   isFavorite: boolean;
   language: string;
-  formatPrice: (price: number) => string;
-  formatDate: (dateString: string) => string;
+  formatPrice: (price: number | undefined | null) => string;
+  formatDate: (dateString: string | undefined | null) => string;
   onToggleFavorite: () => void;
   onShare: () => void;
   isMobile?: boolean;

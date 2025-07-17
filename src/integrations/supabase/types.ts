@@ -1179,7 +1179,7 @@ export type Database = {
           area: number | null
           bathroom_type: string | null
           building_type: string | null
-          category_id: number | null
+          category_id: string | null
           ceiling_height: number | null
           city_id: number | null
           created_at: string | null
@@ -1229,7 +1229,7 @@ export type Database = {
           area?: number | null
           bathroom_type?: string | null
           building_type?: string | null
-          category_id?: number | null
+          category_id?: string | null
           ceiling_height?: number | null
           city_id?: number | null
           created_at?: string | null
@@ -1279,7 +1279,7 @@ export type Database = {
           area?: number | null
           bathroom_type?: string | null
           building_type?: string | null
-          category_id?: number | null
+          category_id?: string | null
           ceiling_height?: number | null
           city_id?: number | null
           created_at?: string | null
@@ -1328,7 +1328,7 @@ export type Database = {
             foreignKeyName: "listings_category_id_fkey"
             columns: ["category_id"]
             isOneToOne: false
-            referencedRelation: "categories_old"
+            referencedRelation: "listing_categories"
             referencedColumns: ["id"]
           },
           {

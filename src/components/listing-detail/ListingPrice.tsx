@@ -7,7 +7,7 @@ interface ListingPriceProps {
   price: number;
   originalPrice: number;
   discount: number;
-  formatPrice: (price: number) => string;
+  formatPrice: (price: number | undefined | null) => string;
   isFavorite: boolean;
   onToggleFavorite: () => void;
   onShare: () => void;

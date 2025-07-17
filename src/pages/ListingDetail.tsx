@@ -76,7 +76,7 @@ export default function ListingDetail() {
               .select(`
                 *,
                 cities(name_ru, name_kz),
-                categories(name_ru, name_kz)
+                listing_categories(name_ru, name_kz)
               `)
               .eq('status', 'active');
 
@@ -137,7 +137,7 @@ export default function ListingDetail() {
               .select(`
                 *,
                 cities(name_ru, name_kz),
-                categories(name_ru, name_kz)
+                listing_categories(name_ru, name_kz)
               `)
               .eq('category_id', categoryId)
               .eq('status', 'active');
@@ -290,18 +290,39 @@ export default function ListingDetail() {
     loadListing();
   }, [listingId, categorySlug, titleSlug, language, location.pathname, getListingById]);
 
-  const formatPrice = (price: number) => {
-    if (price === 0) return language === 'ru' ? 'Бесплатно' : 'Тегін';
+  const formatPrice = (price: number | undefined | null) => {
+    // Handle undefined, null, or NaN values
+    if (price === undefined || price === null || isNaN(price)) {
+      return language === 'ru' ? 'Цена не указана' : 'Баға көрсетілмеген';
+    }
+    
+    if (price === 0) {
+      return language === 'ru' ? 'Бесплатно' : 'Тегін';
+    }
+    
     return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") + ' ₸';
   };
   
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat(language === 'ru' ? 'ru-RU' : 'kk-KZ', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    }).format(date);
+  const formatDate = (dateString: string | undefined | null) => {
+    if (!dateString) {
+      return language === 'ru' ? 'Дата не указана' : 'Күні көрсетілмеген';
+    }
+    
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return language === 'ru' ? 'Неверная дата' : 'Қате күн';
+      }
+      
+      return new Intl.DateTimeFormat(language === 'ru' ? 'ru-RU' : 'kk-KZ', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      }).format(date);
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return language === 'ru' ? 'Ошибка даты' : 'Күн қатесі';
+    }
   };
   
   const handleToggleFavorite = () => {
@@ -349,6 +370,11 @@ export default function ListingDetail() {
     (typeof listing.description === 'string' ? listing.description : '') 
     : '';
 
+  // Ensure we have valid price values with fallbacks
+  const displayPrice = listing.discountPrice || listing.price || 0;
+  const displayOriginalPrice = listing.originalPrice || listing.price || 0;
+  const displayDiscount = listing.discount || 0;
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Header />
@@ -367,12 +393,12 @@ export default function ListingDetail() {
             <ListingHeader 
               title={title}
               city={city}
-              createdAt={listing.createdAt}
-              views={listing.views}
+              createdAt={listing.createdAt || ''}
+              views={listing.views || 0}
               id={listing.id}
-              price={listing.discountPrice}
-              originalPrice={listing.originalPrice}
-              discount={listing.discount}
+              price={displayPrice}
+              originalPrice={displayOriginalPrice}
+              discount={displayDiscount}
               isFeatured={listing.isFeatured || false}
               isFavorite={isFavorite}
               language={language}
@@ -383,9 +409,9 @@ export default function ListingDetail() {
               isMobile={true}
             />
             <ListingPrice 
-              price={listing.discountPrice}
-              originalPrice={listing.originalPrice}
-              discount={listing.discount}
+              price={displayPrice}
+              originalPrice={displayOriginalPrice}
+              discount={displayDiscount}
               formatPrice={formatPrice}
               isFavorite={isFavorite}
               onToggleFavorite={handleToggleFavorite}
@@ -409,9 +435,9 @@ export default function ListingDetail() {
               language={language}
             />
             <ListingStats 
-              createdAt={listing.createdAt}
+              createdAt={listing.createdAt || ''}
               id={listing.id}
-              views={listing.views}
+              views={listing.views || 0}
               isFavorite={isFavorite}
               language={language}
               formatDate={formatDate}
@@ -437,12 +463,12 @@ export default function ListingDetail() {
               <ListingHeader 
                 title={title}
                 city={city}
-                createdAt={listing.createdAt}
-                views={listing.views}
+                createdAt={listing.createdAt || ''}
+                views={listing.views || 0}
                 id={listing.id}
-                price={listing.discountPrice}
-                originalPrice={listing.originalPrice}
-                discount={listing.discount}
+                price={displayPrice}
+                originalPrice={displayOriginalPrice}
+                discount={displayDiscount}
                 isFeatured={listing.isFeatured || false}
                 isFavorite={isFavorite}
                 language={language}
@@ -476,9 +502,9 @@ export default function ListingDetail() {
                 language={language}
               />
               <ListingStats 
-                createdAt={listing.createdAt}
+                createdAt={listing.createdAt || ''}
                 id={listing.id}
-                views={listing.views}
+                views={listing.views || 0}
                 isFavorite={isFavorite}
                 language={language}
                 formatDate={formatDate}
