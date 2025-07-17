@@ -41,14 +41,13 @@ export const uploadImagestoSupabase = async (imageFiles: File[]): Promise<string
 
 export const saveListingToSupabase = async (listingData: CreateListingData): Promise<string | null> => {
   try {
-    // Convert category_id from UUID string to number for database compatibility
-    // For now, we'll set it to null since the old categories table structure is being phased out
+    // Since we're now using listing_categories table with UUID, we can store the category_id directly
     const dbListingData = {
       title: listingData.title,
       description: listingData.description,
       regular_price: listingData.regular_price,
       discount_price: listingData.discount_price,
-      category_id: null, // Temporarily set to null until we migrate listings table
+      category_id: null, // Still set to null for now until we update the listings table to reference listing_categories
       user_id: listingData.user_id,
       city_id: listingData.city_id,
       region_id: listingData.region_id,

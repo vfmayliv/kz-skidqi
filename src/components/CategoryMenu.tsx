@@ -9,9 +9,6 @@ import { useSubcategories } from '@/hooks/useSubcategories';
 import { supabase } from '@/lib/supabase';
 import type { Category } from '@/types/category';
 
-// ID или slug основных категорий верхнего уровня
-const MAIN_CATEGORY_IDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
-
 // Компонент для одной кнопки категории
 const CategoryButton = ({ category }: { category: Category }) => {
   const { language, t } = useAppWithTranslations();
@@ -98,7 +95,7 @@ export const CategoryMenu = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        // Сначала попробуем получить основные категории по условию parent_id IS NULL
+        // Получаем основные категории по условию parent_id IS NULL из listing_categories
         const { data: parentNullData, error: parentNullError } = await supabase
           .from('listing_categories')
           .select('*')
