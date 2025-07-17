@@ -104,7 +104,7 @@ export default function ListingDetail() {
                     discountPrice: listingItem.discount_price || listingItem.regular_price || 0,
                     discount: listingItem.discount_percent || 0,
                     city: listingItem.cities?.name_ru || '',
-                    categoryId: listingItem.category_id?.toString() || '4',
+                    categoryId: listingItem.category_id || '4',
                     createdAt: listingItem.created_at,
                     imageUrl: listingItem.images?.[0] || '/placeholder.svg',
                     images: listingItem.images || ['/placeholder.svg'],
@@ -131,7 +131,7 @@ export default function ListingDetail() {
               }
             }
           } else {
-            // Стандартный поиск по categoryId
+            // Стандартный поиск по categoryId - конвертируем в строку для поиска
             const { data: listings, error } = await supabase
               .from('listings')
               .select(`
@@ -139,7 +139,7 @@ export default function ListingDetail() {
                 cities(name_ru, name_kz),
                 listing_categories(name_ru, name_kz)
               `)
-              .eq('category_id', categoryId)
+              .eq('category_id', categoryId.toString())
               .eq('status', 'active');
 
             if (!error && listings && listings.length > 0) {
@@ -229,38 +229,44 @@ export default function ListingDetail() {
       // Найти похожие объявления в Supabase
       if (targetListing.categoryId) {
         try {
-          const categoryId = getCategoryIdBySlug(targetListing.categoryId);
-          if (categoryId) {
-            const { data: similarData, error } = await supabase
-              .from('listings')
-              .select('*')
-              .eq('category_id', categoryId)
-              .eq('status', 'active')
-              .neq('id', targetListing.id)
-              .limit(4);
-
-            if (!error && similarData) {
-              const similar = similarData.map(item => ({
-                id: item.id,
-                userId: item.user_id,
-                title: item.title,
-                description: item.description || '',
-                price: item.regular_price || 0,
-                originalPrice: item.regular_price || 0,
-                discountPrice: item.discount_price || item.regular_price || 0,
-                discount: item.discount_percent || 0,
-                city: item.city_id?.toString() || '',
-                categoryId: targetListing.categoryId,
-                createdAt: item.created_at,
-                imageUrl: item.images?.[0] || '/placeholder.svg',
-                views: item.views || 0,
-                isFeatured: item.is_premium || false,
-                regionId: item.region_id?.toString() || '',
-                cityId: item.city_id?.toString() || '',
-                microdistrictId: item.microdistrict_id?.toString() || ''
-              }));
-              setSimilarListings(similar);
+          // Если categoryId - это slug, попробуем найти соответствующий ID
+          let searchCategoryId = targetListing.categoryId;
+          if (typeof targetListing.categoryId === 'string') {
+            const numericCategoryId = getCategoryIdBySlug(targetListing.categoryId);
+            if (numericCategoryId) {
+              searchCategoryId = numericCategoryId.toString();
             }
+          }
+          
+          const { data: similarData, error } = await supabase
+            .from('listings')
+            .select('*')
+            .eq('category_id', searchCategoryId)
+            .eq('status', 'active')
+            .neq('id', targetListing.id)
+            .limit(4);
+
+          if (!error && similarData) {
+            const similar = similarData.map(item => ({
+              id: item.id,
+              userId: item.user_id,
+              title: item.title,
+              description: item.description || '',
+              price: item.regular_price || 0,
+              originalPrice: item.regular_price || 0,
+              discountPrice: item.discount_price || item.regular_price || 0,
+              discount: item.discount_percent || 0,
+              city: item.city_id?.toString() || '',
+              categoryId: targetListing.categoryId,
+              createdAt: item.created_at,
+              imageUrl: item.images?.[0] || '/placeholder.svg',
+              views: item.views || 0,
+              isFeatured: item.is_premium || false,
+              regionId: item.region_id?.toString() || '',
+              cityId: item.city_id?.toString() || '',
+              microdistrictId: item.microdistrict_id?.toString() || ''
+            }));
+            setSimilarListings(similar);
           }
         } catch (error) {
           console.error('❌ Ошибка при поиске похожих объявлений:', error);
