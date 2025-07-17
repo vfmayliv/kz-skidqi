@@ -2,7 +2,6 @@
 import React, { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { ChevronRight, ArrowLeft, Loader2 } from 'lucide-react';
 import { useCategorySteps } from '@/hooks/useCategorySteps';
 import { useTranslation } from '@/hooks/use-translation';
@@ -144,20 +143,14 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
               >
                 <div className="flex flex-col items-start w-full">
                   <span className="font-medium">{category.name_ru}</span>
-                  <div className="flex items-center gap-2 mt-1">
-                    {checkingChildren === category.id ? (
-                      <div className="flex items-center gap-1">
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                        <span className="text-xs text-muted-foreground">
-                          {t('checking')}...
-                        </span>
-                      </div>
-                    ) : (
-                      <Badge variant="secondary" className="text-xs">
-                        {t('click.to.explore')}
-                      </Badge>
-                    )}
-                  </div>
+                  {checkingChildren === category.id && (
+                    <div className="flex items-center gap-1 mt-1">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <span className="text-xs text-muted-foreground">
+                        {t('checking')}...
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <ChevronRight className="h-4 w-4 ml-auto opacity-50" />
               </Button>
